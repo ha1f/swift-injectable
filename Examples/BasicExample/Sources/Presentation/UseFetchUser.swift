@@ -2,7 +2,7 @@ import SwiftUI
 
 struct UseFetchUser: DynamicProperty {
     @Environment(\.userUseCase) private var useCase
-    @Environment(\.logger) private var logger
+    private var logger = UseLogger()
     @State var user: User?
     @State var isLoading = false
     @State var error: Error?
