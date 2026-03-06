@@ -1,28 +1,43 @@
 import SwiftUI
-import SwiftInjectableMacros
 
 struct FeatureView: View {
-    @Injected() var viewModel: FeatureViewModel
+    @Environment(\.userUseCase) var userUseCase
+    @Environment(\.logger) var logger
+    @State private var userName = ""
+    @State private var isLoading = false
 
     var body: some View {
         VStack(spacing: 16) {
-            if viewModel.isLoading {
+            if isLoading {
                 ProgressView()
             } else {
-                Text(viewModel.userName)
+                Text(userName)
                     .font(.title)
             }
 
             Button("Fetch User") {
                 Task {
-                    await viewModel.fetch(userId: 1)
+                    await fetch(userId: 1)
                 }
             }
 
-            NavigationLink("User Detail (追加引数パターン)") {
+            NavigationLink("User Detail") {
                 UserDetailView(userId: 42)
             }
         }
         .padding()
+    }
+
+    @MainActor
+    private func fetch(userId: Int) async {
+        isLoading = true
+        defer { isLoading = false }
+        do {
+            let user = try await userUseCase.execute(userId: userId)
+            userName = user.name
+            logger.log("Fetched user: \(user.name)")
+        } catch {
+            logger.log("Error: \(error)")
+        }
     }
 }

@@ -16,9 +16,7 @@ let package = Package(
         .executableTarget(
             name: "BasicExample",
             dependencies: [
-                .product(name: "SwiftInjectable", package: "swift-injectable"),
                 .product(name: "SwiftInjectableMacros", package: "swift-injectable"),
-                .product(name: "SwiftInjectableSwiftUI", package: "swift-injectable"),
                 .product(name: "Mockable", package: "swift-mockable"),
             ],
             path: "Sources"
@@ -27,7 +25,6 @@ let package = Package(
             name: "BasicExampleTests",
             dependencies: [
                 "BasicExample",
-                .product(name: "SwiftInjectable", package: "swift-injectable"),
                 .product(name: "Mockable", package: "swift-mockable"),
             ],
             path: "Tests"

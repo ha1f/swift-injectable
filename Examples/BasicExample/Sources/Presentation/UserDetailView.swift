@@ -1,33 +1,39 @@
 import SwiftUI
-import SwiftInjectableMacros
 
 struct UserDetailView: View {
-    @Injected var viewModel: UserDetailViewModel
-
-    init(userId: Int) {
-        _viewModel = Injected { deps in
-            UserDetailViewModel(
-                userUseCase: deps.userUseCase,
-                logger: deps.logger,
-                userId: userId
-            )
-        }
-    }
+    @Environment(\.userUseCase) var userUseCase
+    @Environment(\.logger) var logger
+    @State private var userName = ""
+    @State private var isLoading = false
+    let userId: Int
 
     var body: some View {
         VStack(spacing: 16) {
-            if viewModel.isLoading {
+            if isLoading {
                 ProgressView()
             } else {
-                Text(viewModel.userName)
+                Text(userName)
                     .font(.title)
-                Text("ID: \(viewModel.userId)")
+                Text("ID: \(userId)")
                     .font(.caption)
             }
         }
         .padding()
         .task {
-            await viewModel.fetch()
+            await fetch()
+        }
+    }
+
+    @MainActor
+    private func fetch() async {
+        isLoading = true
+        defer { isLoading = false }
+        do {
+            let user = try await userUseCase.execute(userId: userId)
+            userName = user.name
+            logger.log("Fetched user detail: \(user.name)")
+        } catch {
+            logger.log("Error: \(error)")
         }
     }
 }

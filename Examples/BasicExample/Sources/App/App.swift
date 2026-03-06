@@ -7,6 +7,7 @@ struct BasicExampleApp: App {
             NavigationStack {
                 FeatureView()
             }
+            .inject(AppDependencies())
         }
     }
 }

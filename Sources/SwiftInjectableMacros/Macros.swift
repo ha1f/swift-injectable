@@ -1,17 +1,16 @@
-@_exported import SwiftInjectable
-@_exported import SwiftInjectableSwiftUI
+@_exported import SwiftUI
 
-/// 依存としてマークする。@Injectable マクロが読み取り Dependencies struct に含める。
-@attached(peer)
-public macro Dependency() = #externalMacro(
+/// ViewModifier 準拠（body）を自動生成する。
+@attached(member, names: named(body))
+@attached(extension, conformances: ViewModifier)
+public macro Dependencies() = #externalMacro(
     module: "SwiftInjectableMacrosPlugin",
-    type: "DependencyMacro"
+    type: "DependenciesMacro"
 )
 
-/// Dependencies struct、init、Injectable 準拠を自動生成する。
-@attached(member, names: named(Dependencies), named(init), arbitrary)
-@attached(extension, conformances: Injectable, AutoInjectable)
-public macro Injectable() = #externalMacro(
-    module: "SwiftInjectableMacrosPlugin",
-    type: "InjectableMacro"
-)
+extension View {
+    /// @Dependencies struct を使って依存を一括注入する。
+    public func inject(_ modifier: some ViewModifier) -> some View {
+        self.modifier(modifier)
+    }
+}
