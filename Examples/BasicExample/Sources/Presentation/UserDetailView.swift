@@ -1,18 +1,15 @@
 import SwiftUI
 
 struct UserDetailView: View {
-    @Environment(\.userUseCase) var userUseCase
-    @Environment(\.logger) var logger
-    @State private var userName = ""
-    @State private var isLoading = false
+    var fetchUser = UseFetchUser()
     let userId: Int
 
     var body: some View {
         VStack(spacing: 16) {
-            if isLoading {
+            if fetchUser.isLoading {
                 ProgressView()
             } else {
-                Text(userName)
+                Text(fetchUser.user?.name ?? "")
                     .font(.title)
                 Text("ID: \(userId)")
                     .font(.caption)
@@ -20,20 +17,7 @@ struct UserDetailView: View {
         }
         .padding()
         .task {
-            await fetch()
-        }
-    }
-
-    @MainActor
-    private func fetch() async {
-        isLoading = true
-        defer { isLoading = false }
-        do {
-            let user = try await userUseCase.execute(userId: userId)
-            userName = user.name
-            logger.log("Fetched user detail: \(user.name)")
-        } catch {
-            logger.log("Error: \(error)")
+            await fetchUser.fetch(userId: userId)
         }
     }
 }

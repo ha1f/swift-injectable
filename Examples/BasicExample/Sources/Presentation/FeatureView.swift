@@ -1,23 +1,20 @@
 import SwiftUI
 
 struct FeatureView: View {
-    @Environment(\.userUseCase) var userUseCase
-    @Environment(\.logger) var logger
-    @State private var userName = ""
-    @State private var isLoading = false
+    var fetchUser = UseFetchUser()
 
     var body: some View {
         VStack(spacing: 16) {
-            if isLoading {
+            if fetchUser.isLoading {
                 ProgressView()
             } else {
-                Text(userName)
+                Text(fetchUser.user?.name ?? "")
                     .font(.title)
             }
 
             Button("Fetch User") {
                 Task {
-                    await fetch(userId: 1)
+                    await fetchUser.fetch(userId: 1)
                 }
             }
 
@@ -26,18 +23,5 @@ struct FeatureView: View {
             }
         }
         .padding()
-    }
-
-    @MainActor
-    private func fetch(userId: Int) async {
-        isLoading = true
-        defer { isLoading = false }
-        do {
-            let user = try await userUseCase.execute(userId: userId)
-            userName = user.name
-            logger.log("Fetched user: \(user.name)")
-        } catch {
-            logger.log("Error: \(error)")
-        }
     }
 }
