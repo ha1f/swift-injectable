@@ -1,9 +1,10 @@
 import SwiftUI
+import SwiftInjectableMacros
 
 struct UseLogger: DynamicProperty {
-    @Environment(\.logger) private var logger
+    @Deps var deps: AppDependencies
 
     func log(_ message: String) {
-        logger.log(message)
+        deps.logger.log(message)
     }
 }

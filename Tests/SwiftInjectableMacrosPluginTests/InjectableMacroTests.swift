@@ -24,8 +24,9 @@ final class DependenciesMacroTests: XCTestCase {
 
                 func body(content: Content) -> some View {
                     content
-                        .environment(\\.userUseCase, userUseCase)
-                        .environment(\\.logger, logger)
+                        .transformEnvironment(\\.dependenciesStore) { store in
+                            store.register(self)
+                        }
                 }
             }
 

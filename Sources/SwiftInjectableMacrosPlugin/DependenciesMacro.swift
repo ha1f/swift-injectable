@@ -22,14 +22,12 @@ extension DependenciesMacro: MemberMacro {
             return []
         }
 
-        let envModifiers = properties.map { prop in
-            ".environment(\\.\(prop.name), \(prop.name))"
-        }.joined(separator: "\n        ")
-
         let body: DeclSyntax = """
             func body(content: Content) -> some View {
                 content
-                    \(raw: envModifiers)
+                    .transformEnvironment(\\.dependenciesStore) { store in
+                        store.register(self)
+                    }
             }
             """
 

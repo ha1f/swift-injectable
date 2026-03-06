@@ -1,8 +1,8 @@
 import SwiftUI
+import SwiftInjectableMacros
 
 struct UseFetchUser: DynamicProperty {
-    @Environment(\.userUseCase) private var useCase
-    private var logger = UseLogger()
+    @Deps var deps: AppDependencies
     @State var user: User?
     @State var isLoading = false
     @State var error: Error?
@@ -12,11 +12,11 @@ struct UseFetchUser: DynamicProperty {
         isLoading = true
         defer { isLoading = false }
         do {
-            user = try await useCase.execute(userId: userId)
-            logger.log("Fetched user: \(user?.name ?? "")")
+            user = try await deps.userUseCase.execute(userId: userId)
+            deps.logger.log("Fetched user: \(user?.name ?? "")")
         } catch {
             self.error = error
-            logger.log("Error: \(error)")
+            deps.logger.log("Error: \(error)")
         }
     }
 }
