@@ -1,12 +1,11 @@
 import Foundation
 import SwiftInjectableMacros
 
-/// UseCase 経由で依存を使うパターン
 @Injectable
 @Observable
 final class FeatureViewModel {
-    @ObservationIgnored @Inject var fetchUserUseCase: any FetchUserUseCaseProtocol
-    @ObservationIgnored @Inject var logger: any LoggerProtocol
+    @Dependency let fetchUserUseCase: any FetchUserUseCaseProtocol
+    @Dependency let logger: any LoggerProtocol
 
     var userName: String = ""
     var isLoading: Bool = false

@@ -72,16 +72,7 @@ public final class Container: @unchecked Sendable {
             }
         }
 
-        // 2. Injectable 準拠ならコンテナ経由で生成
-        if let resolvableType = type as? Injectable.Type {
-            let instance = resolvableType.init(container: self)
-            guard let typed = instance as? T else {
-                fatalError("Failed to cast Injectable instance to \(type).")
-            }
-            return typed
-        }
-
-        // 3. 解決不能
-        fatalError("No registration found for \(type). Register it or conform to Injectable.")
+        // 2. 解決不能
+        fatalError("No registration found for \(type).")
     }
 }

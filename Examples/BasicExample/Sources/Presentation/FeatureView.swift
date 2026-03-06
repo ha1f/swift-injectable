@@ -1,8 +1,8 @@
 import SwiftUI
-import SwiftInjectableSwiftUI
+import SwiftInjectableMacros
 
 struct FeatureView: View {
-    @Injected var viewModel: FeatureViewModel
+    @Injected() var viewModel: FeatureViewModel
 
     var body: some View {
         VStack(spacing: 16) {

@@ -1,37 +1,33 @@
 import SwiftUI
-import SwiftInjectable
+import SwiftInjectableMacros
 
 struct UserDetailView: View {
-    // 追加引数があるため @Injected は使えない。Container から手動で生成する。
-    @Environment(\.container) private var container
-    @State private var viewModel: UserDetailViewModel?
+    @Injected var viewModel: UserDetailViewModel
 
-    let userId: Int
+    init(userId: Int) {
+        _viewModel = Injected { deps in
+            UserDetailViewModel(
+                fetchUserUseCase: deps.fetchUserUseCase,
+                logger: deps.logger,
+                userId: userId
+            )
+        }
+    }
 
     var body: some View {
-        Group {
-            if let viewModel {
-                VStack(spacing: 16) {
-                    if viewModel.isLoading {
-                        ProgressView()
-                    } else {
-                        Text(viewModel.userName)
-                            .font(.title)
-                        Text("ID: \(viewModel.userId)")
-                            .font(.caption)
-                    }
-                }
-            } else {
+        VStack(spacing: 16) {
+            if viewModel.isLoading {
                 ProgressView()
+            } else {
+                Text(viewModel.userName)
+                    .font(.title)
+                Text("ID: \(viewModel.userId)")
+                    .font(.caption)
             }
         }
         .padding()
         .task {
-            if viewModel == nil {
-                let vm = UserDetailViewModel(container: container, userId: userId)
-                viewModel = vm
-                await vm.fetch()
-            }
+            await viewModel.fetch()
         }
     }
 }

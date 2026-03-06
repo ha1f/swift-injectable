@@ -3,7 +3,7 @@ import SwiftSyntaxMacros
 
 public struct InjectableMacro {}
 
-// MARK: - MemberMacro（init生成）
+// MARK: - MemberMacro（Dependencies struct + init 生成）
 
 extension InjectableMacro: MemberMacro {
     public static func expansion(
@@ -12,7 +12,6 @@ extension InjectableMacro: MemberMacro {
         conformingTo protocols: [TypeSyntax],
         in context: some MacroExpansionContext
     ) throws -> [DeclSyntax] {
-        // classのみ許可
         guard declaration.is(ClassDeclSyntax.self) else {
             throw DiagnosticsError(message: "@Injectable はクラスにのみ適用できます")
         }
@@ -20,51 +19,58 @@ extension InjectableMacro: MemberMacro {
         let injectProperties = extractInjectProperties(from: declaration)
         let extraProperties = extractExtraProperties(from: declaration)
 
-        // ① Container 用 init（本番・auto-resolve 用）
-        let containerInjectAssignments = injectProperties.map { prop in
-            "self._\(prop.name) = Inject(container.resolve((\(prop.type)).self))"
-        }
-        let containerExtraAssignments = extraProperties.map { prop in
-            "self.\(prop.name) = \(prop.name)"
-        }
-        let containerBody = (containerInjectAssignments + containerExtraAssignments)
-            .joined(separator: "\n    ")
-        let extraParams = extraProperties.map { "\($0.name): \($0.type)" }
-        let containerParams = (["container: Container"] + extraParams).joined(separator: ", ")
+        var members: [DeclSyntax] = []
 
-        let containerInit: DeclSyntax = """
-            init(\(raw: containerParams)) {
-                \(raw: containerBody)
-            }
-            """
+        // ① Dependencies struct（@Inject プロパティがある場合のみ）
+        if !injectProperties.isEmpty {
+            let envProperties = injectProperties.map { prop in
+                "    @Environment(\\.\(prop.name)) var \(prop.name): \(prop.type)"
+            }.joined(separator: "\n")
 
-        // ② 直接注入 init（テスト用）— @Inject プロパティがある場合のみ生成
-        guard !injectProperties.isEmpty else {
-            return [containerInit]
+            let className = declaration.as(ClassDeclSyntax.self)!.name.trimmedDescription
+
+            let depsStruct: DeclSyntax = """
+                struct Dependencies: DependenciesProtocol {
+                    typealias Target = \(raw: className)
+                \(raw: envProperties)
+                    init() {}
+                    func resolve() -> \(raw: className).Dependencies { self }
+                }
+                """
+            members.append(depsStruct)
         }
 
-        let directInjectAssignments = injectProperties.map { prop in
-            "self._\(prop.name) = Inject(\(prop.name))"
-        }
-        let directExtraAssignments = extraProperties.map { prop in
-            "self.\(prop.name) = \(prop.name)"
-        }
-        let directBody = (directInjectAssignments + directExtraAssignments)
-            .joined(separator: "\n    ")
-        let directInjectParams = injectProperties.map { "\($0.name): \($0.type)" }
-        let directParams = (directInjectParams + extraParams).joined(separator: ", ")
+        // ② memberwise init（テスト用 / 通常のコンストラクタ注入）
+        let allProperties = injectProperties + extraProperties
+        if !allProperties.isEmpty {
+            let params = allProperties.map { "\($0.name): \($0.type)" }.joined(separator: ", ")
+            let assignments = allProperties.map { "self.\($0.name) = \($0.name)" }.joined(separator: "\n    ")
 
-        let directInit: DeclSyntax = """
-            init(\(raw: directParams)) {
-                \(raw: directBody)
-            }
-            """
+            let memberwiseInit: DeclSyntax = """
+                init(\(raw: params)) {
+                    \(raw: assignments)
+                }
+                """
+            members.append(memberwiseInit)
+        }
 
-        return [containerInit, directInit]
+        // ③ init(deps:)（追加パラメータなしの場合のみ、AutoInjectable用）
+        if !injectProperties.isEmpty && extraProperties.isEmpty {
+            let depsAssignments = injectProperties.map { "self.\($0.name) = deps.\($0.name)" }.joined(separator: "\n    ")
+
+            let depsInit: DeclSyntax = """
+                init(deps: Dependencies) {
+                    \(raw: depsAssignments)
+                }
+                """
+            members.append(depsInit)
+        }
+
+        return members
     }
 }
 
-// MARK: - ExtensionMacro（Injectable準拠）
+// MARK: - ExtensionMacro（Injectable 準拠）
 
 extension InjectableMacro: ExtensionMacro {
     public static func expansion(
@@ -78,20 +84,34 @@ extension InjectableMacro: ExtensionMacro {
             return []
         }
 
-        // 追加引数がある場合は init(container:) と一致しないため準拠を生成しない
-        let extraProperties = extractExtraProperties(from: declaration)
-        guard extraProperties.isEmpty else {
+        let injectProperties = extractInjectProperties(from: declaration)
+        guard !injectProperties.isEmpty else {
             return []
         }
 
-        let extensionDecl: DeclSyntax = """
+        let extraProperties = extractExtraProperties(from: declaration)
+
+        var extensions: [ExtensionDeclSyntax] = []
+
+        // Injectable 準拠（常に生成）
+        let injectableExt: DeclSyntax = """
             extension \(type.trimmed): Injectable {}
             """
-
-        guard let ext = extensionDecl.as(ExtensionDeclSyntax.self) else {
-            return []
+        if let ext = injectableExt.as(ExtensionDeclSyntax.self) {
+            extensions.append(ext)
         }
-        return [ext]
+
+        // AutoInjectable 準拠（追加パラメータなしの場合のみ）
+        if extraProperties.isEmpty {
+            let autoExt: DeclSyntax = """
+                extension \(type.trimmed): AutoInjectable {}
+                """
+            if let ext = autoExt.as(ExtensionDeclSyntax.self) {
+                extensions.append(ext)
+            }
+        }
+
+        return extensions
     }
 }
 
@@ -102,37 +122,29 @@ private struct InjectProperty {
     let type: String
 }
 
-/// @Inject なし・デフォルト値なしの stored property を抽出する（追加引数になる）
-private func extractExtraProperties(from declaration: some DeclGroupSyntax) -> [InjectProperty] {
+/// @Inject が付いた let stored property を抽出する（依存）
+private func extractInjectProperties(from declaration: some DeclGroupSyntax) -> [InjectProperty] {
     declaration.memberBlock.members.compactMap { member -> InjectProperty? in
         guard let varDecl = member.decl.as(VariableDeclSyntax.self) else {
             return nil
         }
 
-        // @Inject が付いていないことを確認
-        let hasInject = varDecl.attributes.contains { attr in
-            guard case .attribute(let attribute) = attr else { return false }
-            return attribute.attributeName.trimmedDescription == "Inject"
-        }
-        guard !hasInject else {
+        guard varDecl.bindingSpecifier.tokenKind == .keyword(.let) else {
             return nil
         }
 
-        // 最初のバインディングから判定
+        let hasInject = varDecl.attributes.contains { attr in
+            guard case .attribute(let attribute) = attr else { return false }
+            return attribute.attributeName.trimmedDescription == "Dependency"
+        }
+        guard hasInject else {
+            return nil
+        }
+
         guard let binding = varDecl.bindings.first,
               let pattern = binding.pattern.as(IdentifierPatternSyntax.self),
               let typeAnnotation = binding.typeAnnotation
         else {
-            return nil
-        }
-
-        // デフォルト値がある場合はスキップ
-        guard binding.initializer == nil else {
-            return nil
-        }
-
-        // computed property はスキップ（accessor がある場合）
-        guard binding.accessorBlock == nil else {
             return nil
         }
 
@@ -143,32 +155,37 @@ private func extractExtraProperties(from declaration: some DeclGroupSyntax) -> [
     }
 }
 
-/// @Inject が付いた var stored property を抽出する
-private func extractInjectProperties(from declaration: some DeclGroupSyntax) -> [InjectProperty] {
+/// @Inject なし・初期値なしの let stored property を抽出する（カスタムパラメータ）
+private func extractExtraProperties(from declaration: some DeclGroupSyntax) -> [InjectProperty] {
     declaration.memberBlock.members.compactMap { member -> InjectProperty? in
         guard let varDecl = member.decl.as(VariableDeclSyntax.self) else {
             return nil
         }
 
-        // var であることを確認
-        guard varDecl.bindingSpecifier.tokenKind == .keyword(.var) else {
+        guard varDecl.bindingSpecifier.tokenKind == .keyword(.let) else {
             return nil
         }
 
-        // @Inject 属性が付いているか確認
         let hasInject = varDecl.attributes.contains { attr in
             guard case .attribute(let attribute) = attr else { return false }
-            return attribute.attributeName.trimmedDescription == "Inject"
+            return attribute.attributeName.trimmedDescription == "Dependency"
         }
-        guard hasInject else {
+        guard !hasInject else {
             return nil
         }
 
-        // 最初のバインディングから名前と型を取得
         guard let binding = varDecl.bindings.first,
               let pattern = binding.pattern.as(IdentifierPatternSyntax.self),
               let typeAnnotation = binding.typeAnnotation
         else {
+            return nil
+        }
+
+        guard binding.initializer == nil else {
+            return nil
+        }
+
+        guard binding.accessorBlock == nil else {
             return nil
         }
 

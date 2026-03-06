@@ -1,27 +1,37 @@
 import SwiftUI
 import SwiftInjectable
 
-/// SwiftUI View 内で依存を解決する Property Wrapper
-///
-/// `@State` で保持するため、View 再構築でも ViewModel の寿命が維持される。
-/// `update()` は `body` 評価前に呼ばれるため、`wrappedValue` 時点で必ず値がセットされている。
 @propertyWrapper
-public struct Injected<Value: Injectable>: DynamicProperty {
-    @Environment(\.container) private var container
-    @State private var resolved: Value?
+public struct Injected<Value: Injectable>: DynamicProperty
+    where Value.Dependencies: DependenciesProtocol,
+          Value.Dependencies.Target == Value
+{
+    private var deps = Value.Dependencies()
+    @State private var object: Value?
+    private let factory: (Value.Dependencies) -> Value
 
     public var wrappedValue: Value {
-        guard let resolved else {
-            fatalError("@Injected<\(Value.self)> was accessed before update(). This should not happen.")
+        guard let object else {
+            fatalError("@Injected<\(Value.self)> was accessed before update().")
         }
-        return resolved
+        return object
     }
 
-    public init() {}
+    public init(_ factory: @escaping (Value.Dependencies) -> Value) {
+        self.factory = factory
+    }
 
     public mutating func update() {
-        if resolved == nil {
-            resolved = container.resolve(Value.self)
+        if object == nil {
+            object = factory(deps.resolve())
         }
+    }
+}
+
+// MARK: - 追加パラメータなしの場合、closure省略可能
+
+extension Injected where Value: AutoInjectable {
+    public init() {
+        self.init { deps in Value(deps: deps) }
     }
 }

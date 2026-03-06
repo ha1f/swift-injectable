@@ -38,7 +38,7 @@ let package = Package(
     ),
     .target(
       name: "SwiftInjectableMacros",
-      dependencies: ["SwiftInjectable", "SwiftInjectableMacrosPlugin"]
+      dependencies: ["SwiftInjectable", "SwiftInjectableSwiftUI", "SwiftInjectableMacrosPlugin"]
     ),
     .macro(
       name: "SwiftInjectableMacrosPlugin",
