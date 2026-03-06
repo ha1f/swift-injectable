@@ -1,3 +1,3 @@
-public protocol Injectable: AnyObject {
+public protocol Injectable: Sendable {
     init(container: Container)
 }

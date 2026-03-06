@@ -6,41 +6,40 @@ import SwiftInjectable
 @Suite("FeatureViewModel テスト")
 struct FeatureViewModelTests {
 
-    @Test("ユーザー取得が成功する（直接注入）")
+    @Test("UseCase 経由でユーザー取得が成功する")
     @MainActor
     func fetchUserSuccess() async {
-        let mockAPIClient = APIClientProtocolMock()
-        mockAPIClient.fetchUserHandler = { id in
-            User(id: id, name: "Test User \(id)")
+        let mockUseCase = FetchUserUseCaseProtocolMock()
+        mockUseCase.executeHandler = { userId in
+            User(id: userId, name: "Test User \(userId)")
         }
 
         let mockLogger = LoggerProtocolMock()
 
-        // Container 不要！直接注入 init を使う
         let vm = FeatureViewModel(
-            apiClient: mockAPIClient,
+            fetchUserUseCase: mockUseCase,
             logger: mockLogger
         )
         await vm.fetch(userId: 42)
 
         #expect(vm.userName == "Test User 42")
         #expect(vm.isLoading == false)
-        #expect(mockAPIClient.fetchUserCallCount == 1)
+        #expect(mockUseCase.executeCallCount == 1)
         #expect(mockLogger.logCallCount == 1)
     }
 
-    @Test("ユーザー取得が失敗してもクラッシュしない（直接注入）")
+    @Test("UseCase が失敗してもクラッシュしない")
     @MainActor
     func fetchUserFailure() async {
-        let mockAPIClient = APIClientProtocolMock()
-        mockAPIClient.fetchUserHandler = { _ in
+        let mockUseCase = FetchUserUseCaseProtocolMock()
+        mockUseCase.executeHandler = { _ in
             throw URLError(.notConnectedToInternet)
         }
 
         let mockLogger = LoggerProtocolMock()
 
         let vm = FeatureViewModel(
-            apiClient: mockAPIClient,
+            fetchUserUseCase: mockUseCase,
             logger: mockLogger
         )
         await vm.fetch(userId: 1)

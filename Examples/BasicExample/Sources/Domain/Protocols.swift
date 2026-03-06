@@ -1,6 +1,15 @@
 import Foundation
 import Mockable
 
+// MARK: - モデル
+
+struct User: Sendable, Identifiable {
+    let id: Int
+    let name: String
+}
+
+// MARK: - Repository
+
 @Mockable
 protocol APIClientProtocol: Sendable {
     func fetchUser(id: Int) async throws -> User
@@ -11,7 +20,9 @@ protocol LoggerProtocol: Sendable {
     func log(_ message: String)
 }
 
-struct User: Sendable, Identifiable {
-    let id: Int
-    let name: String
+// MARK: - UseCase
+
+@Mockable
+protocol FetchUserUseCaseProtocol: Sendable {
+    func execute(userId: Int) async throws -> User
 }

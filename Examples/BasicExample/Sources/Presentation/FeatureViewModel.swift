@@ -1,10 +1,11 @@
 import Foundation
 import SwiftInjectableMacros
 
+/// UseCase 経由で依存を使うパターン
 @Injectable
 @Observable
 final class FeatureViewModel {
-    @ObservationIgnored @Inject var apiClient: any APIClientProtocol
+    @ObservationIgnored @Inject var fetchUserUseCase: any FetchUserUseCaseProtocol
     @ObservationIgnored @Inject var logger: any LoggerProtocol
 
     var userName: String = ""
@@ -16,7 +17,7 @@ final class FeatureViewModel {
         defer { isLoading = false }
 
         do {
-            let user = try await apiClient.fetchUser(id: userId)
+            let user = try await fetchUserUseCase.execute(userId: userId)
             userName = user.name
             logger.log("Fetched user: \(user.name)")
         } catch {
