@@ -7,9 +7,3 @@ struct LiveAPIClient: APIClientProtocol {
         return User(id: id, name: "User \(id)")
     }
 }
-
-struct ConsoleLogger: LoggerProtocol {
-    func log(_ message: String) {
-        print("[LOG] \(message)")
-    }
-}
