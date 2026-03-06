@@ -1,11 +1,7 @@
 import Foundation
 
-final class UserUseCase: UserUseCaseProtocol {
-    private let apiClient: any APIClientProtocol
-
-    init(apiClient: any APIClientProtocol) {
-        self.apiClient = apiClient
-    }
+struct UserUseCase: UserUseCaseProtocol {
+    let apiClient: any APIClientProtocol
 
     func execute(userId: Int) async throws -> User {
         try await apiClient.fetchUser(id: userId)
