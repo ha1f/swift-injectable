@@ -2,6 +2,7 @@ import SwiftUI
 
 struct UserDetailView: View {
     var fetchUser = UseFetchUser()
+    var logger = UseLogger()
     let userId: Int
 
     var body: some View {

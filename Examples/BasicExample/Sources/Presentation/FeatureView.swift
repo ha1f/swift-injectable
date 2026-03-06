@@ -2,6 +2,7 @@ import SwiftUI
 
 struct FeatureView: View {
     var fetchUser = UseFetchUser()
+    var logger = UseLogger()
 
     var body: some View {
         VStack(spacing: 16) {
