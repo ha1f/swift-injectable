@@ -23,6 +23,6 @@ protocol LoggerProtocol: Sendable {
 // MARK: - UseCase
 
 @Mockable
-protocol FetchUserUseCaseProtocol: Sendable {
+protocol UserUseCaseProtocol: Sendable {
     func execute(userId: Int) async throws -> User
 }

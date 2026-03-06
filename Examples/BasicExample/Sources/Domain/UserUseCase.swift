@@ -1,6 +1,6 @@
 import Foundation
 
-final class FetchUserUseCase: FetchUserUseCaseProtocol {
+final class UserUseCase: UserUseCaseProtocol {
     private let apiClient: any APIClientProtocol
 
     init(apiClient: any APIClientProtocol) {

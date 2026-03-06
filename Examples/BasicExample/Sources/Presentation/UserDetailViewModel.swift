@@ -4,7 +4,7 @@ import SwiftInjectableMacros
 @Injectable
 @Observable
 final class UserDetailViewModel {
-    @Dependency let fetchUserUseCase: any FetchUserUseCaseProtocol
+    @Dependency let userUseCase: any UserUseCaseProtocol
     @Dependency let logger: any LoggerProtocol
     let userId: Int
 
@@ -17,7 +17,7 @@ final class UserDetailViewModel {
         defer { isLoading = false }
 
         do {
-            let user = try await fetchUserUseCase.execute(userId: userId)
+            let user = try await userUseCase.execute(userId: userId)
             userName = user.name
             logger.log("Fetched user detail: \(user.name)")
         } catch {

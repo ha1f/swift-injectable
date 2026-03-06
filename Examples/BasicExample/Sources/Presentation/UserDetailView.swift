@@ -7,7 +7,7 @@ struct UserDetailView: View {
     init(userId: Int) {
         _viewModel = Injected { deps in
             UserDetailViewModel(
-                fetchUserUseCase: deps.fetchUserUseCase,
+                userUseCase: deps.userUseCase,
                 logger: deps.logger,
                 userId: userId
             )

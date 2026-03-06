@@ -8,7 +8,7 @@ struct FeatureViewModelTests {
     @Test("UseCase 経由でユーザー取得が成功する")
     @MainActor
     func fetchUserSuccess() async {
-        let mockUseCase = FetchUserUseCaseProtocolMock()
+        let mockUseCase = UserUseCaseProtocolMock()
         mockUseCase.executeHandler = { userId in
             User(id: userId, name: "Test User \(userId)")
         }
@@ -16,7 +16,7 @@ struct FeatureViewModelTests {
         let mockLogger = LoggerProtocolMock()
 
         let vm = FeatureViewModel(
-            fetchUserUseCase: mockUseCase,
+            userUseCase: mockUseCase,
             logger: mockLogger
         )
         await vm.fetch(userId: 42)
@@ -30,7 +30,7 @@ struct FeatureViewModelTests {
     @Test("UseCase が失敗してもクラッシュしない")
     @MainActor
     func fetchUserFailure() async {
-        let mockUseCase = FetchUserUseCaseProtocolMock()
+        let mockUseCase = UserUseCaseProtocolMock()
         mockUseCase.executeHandler = { _ in
             throw URLError(.notConnectedToInternet)
         }
@@ -38,7 +38,7 @@ struct FeatureViewModelTests {
         let mockLogger = LoggerProtocolMock()
 
         let vm = FeatureViewModel(
-            fetchUserUseCase: mockUseCase,
+            userUseCase: mockUseCase,
             logger: mockLogger
         )
         await vm.fetch(userId: 1)
@@ -55,7 +55,7 @@ struct UserDetailViewModelTests {
     @Test("追加引数付きの直接注入")
     @MainActor
     func fetchWithDirectInjection() async {
-        let mockUseCase = FetchUserUseCaseProtocolMock()
+        let mockUseCase = UserUseCaseProtocolMock()
         mockUseCase.executeHandler = { id in
             User(id: id, name: "Detail User \(id)")
         }
@@ -63,7 +63,7 @@ struct UserDetailViewModelTests {
         let mockLogger = LoggerProtocolMock()
 
         let vm = UserDetailViewModel(
-            fetchUserUseCase: mockUseCase,
+            userUseCase: mockUseCase,
             logger: mockLogger,
             userId: 99
         )
