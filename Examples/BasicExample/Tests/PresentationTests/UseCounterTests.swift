@@ -1,7 +1,7 @@
 import Presentation
 import Testing
 
-@Suite("UseCounter", .serialized)
+@Suite("UseCounter")
 @MainActor
 struct UseCounterTests {
     @Test("初期値が0")

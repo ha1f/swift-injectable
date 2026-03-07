@@ -58,14 +58,14 @@ extension EnvironmentValues {
 // MARK: - テスト用オーバーライド
 
 /// テスト時に `@Injected` の解決元を上書きするためのストア。
-/// `withTestInjection` 経由で使う。
-@MainActor
+/// `withTestInjection` 経由で使う。TaskLocal ベースのため並列テストに対応。
 public enum InjectionOverride {
-    public static var current: InjectionStore?
+    @TaskLocal public static var current: InjectionStore?
 }
 
 /// テスト内で `@Injected` が解決する依存をオーバーライドする。
 /// SwiftUI の Environment を使わずに DynamicProperty をテストできる。
+/// TaskLocal ベースのため `.serialized` なしで並列テスト可能。
 @MainActor
 public func withTestInjection(
     configure: (inout InjectionStore) -> Void,
@@ -73,9 +73,9 @@ public func withTestInjection(
 ) async rethrows {
     var store = InjectionStore()
     configure(&store)
-    InjectionOverride.current = store
-    defer { InjectionOverride.current = nil }
-    try await perform()
+    try await InjectionOverride.$current.withValue(store) {
+        try await perform()
+    }
 }
 
 // MARK: - @Injected property wrapper
@@ -88,8 +88,8 @@ public struct Injected<D>: DynamicProperty {
     @Environment(\.injectionStore) private var store
 
     public var wrappedValue: D {
-        // テスト用オーバーライドを優先
-        if let override = MainActor.assumeIsolated({ InjectionOverride.current }),
+        // テスト用オーバーライドを優先（TaskLocal）
+        if let override = InjectionOverride.current,
            let value = override.resolve(D.self) {
             return value
         }

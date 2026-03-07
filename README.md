@@ -248,7 +248,7 @@ struct UseFetchUserTests {
 }
 ```
 
-> **Note:** Test suites using `withTestInjection` must be marked with `.serialized` to avoid race conditions on the shared `InjectionOverride` store.
+`withTestInjection` uses `TaskLocal` internally, so tests can run in parallel without `.serialized`.
 
 ### Testing hooks without DI
 
@@ -292,8 +292,8 @@ func counterIncrements() {
 
 | API | Description |
 |---|---|
-| `withTestInjection(configure:perform:)` | Overrides `@Injected` resolution for the duration of `perform`. |
-| `InjectionOverride` | Static store used by `withTestInjection`. Not intended for direct use. |
+| `withTestInjection(configure:perform:)` | Overrides `@Injected` resolution for the duration of `perform`. Uses `TaskLocal` for safe parallel testing. |
+| `InjectionOverride` | `TaskLocal`-based store used by `withTestInjection`. Not intended for direct use. |
 | `InjectionStore` | Type-keyed dependency storage. Use `register(_:as:)` and `resolve(_:)`. |
 
 ---
@@ -326,7 +326,6 @@ See [`Examples/BasicExample`](Examples/BasicExample) for a complete multi-module
 
 ### Planned Improvements
 
-- **TaskLocal-based test isolation** — `InjectionOverride` currently uses a `@MainActor static var`, requiring `.serialized` on test suites that use `withTestInjection`. Migrating to `TaskLocal` would allow parallel test execution safely.
 - **Generic struct support for `@Hook`** — `@Hook struct Foo<T>` does not propagate generic parameters to the generated `Storage` class, causing compile errors. Workaround: avoid generic type parameters in stored vars.
 - **Fallback for `@Injected`** — Resolving an unregistered dependency triggers `fatalError` at runtime. A `@Injected(default:)` variant or compile-time validation would improve safety.
 - **Simpler DI registration API** — `store.register(value as any P, as: (any P).self)` is verbose. A shorter API leveraging type inference is desirable.

@@ -2,7 +2,7 @@ import Presentation
 import SwiftUI
 import Testing
 
-@Suite("UseCounterView", .serialized)
+@Suite("UseCounterView")
 @MainActor
 struct UseCounterViewTests {
     @Test("初期状態のテキストと色")
