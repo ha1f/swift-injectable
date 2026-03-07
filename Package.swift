@@ -16,6 +16,10 @@ let package = Package(
       name: "SwiftInjectable",
       targets: ["SwiftInjectable"]
     ),
+    .library(
+      name: "SwiftHooks",
+      targets: ["SwiftHooks"]
+    ),
   ],
   dependencies: [
     .package(url: "https://github.com/swiftlang/swift-syntax", "509.0.0"..<"603.0.0"),
@@ -37,6 +41,25 @@ let package = Package(
       dependencies: [
         "SwiftInjectable",
         "SwiftInjectableMacrosPlugin",
+        .product(name: "SwiftSyntaxMacrosTestSupport", package: "swift-syntax"),
+      ]
+    ),
+    .target(
+      name: "SwiftHooks",
+      dependencies: ["SwiftHooksMacrosPlugin"]
+    ),
+    .macro(
+      name: "SwiftHooksMacrosPlugin",
+      dependencies: [
+        .product(name: "SwiftSyntaxMacros", package: "swift-syntax"),
+        .product(name: "SwiftCompilerPlugin", package: "swift-syntax"),
+      ]
+    ),
+    .testTarget(
+      name: "SwiftHooksTests",
+      dependencies: [
+        "SwiftHooks",
+        "SwiftHooksMacrosPlugin",
         .product(name: "SwiftSyntaxMacrosTestSupport", package: "swift-syntax"),
       ]
     ),

@@ -35,6 +35,7 @@ let package = Package(
             dependencies: [
                 "Domain",
                 .product(name: "SwiftInjectable", package: "swift-injectable"),
+                .product(name: "SwiftHooks", package: "swift-injectable"),
             ],
             path: "Sources/Presentation"
         ),

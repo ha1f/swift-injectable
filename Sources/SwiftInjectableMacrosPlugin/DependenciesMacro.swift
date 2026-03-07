@@ -1,10 +1,22 @@
+import SwiftDiagnostics
 import SwiftSyntax
 import SwiftSyntaxMacros
 
-/// @Injectable マクロ。lazy var から registerAll と init を自動生成する。
+/// @Injectable マクロ。@Provide(as:) が付いたプロパティから registerAll を自動生成する。
 public struct InjectableMacro {}
 
-// MARK: - MemberMacro（registerAll + init 生成）
+/// @Provide マクロ。マーカーとして機能し、コード生成は行わない。
+public struct ProvideMacro: PeerMacro {
+    public static func expansion(
+        of node: AttributeSyntax,
+        providingPeersOf declaration: some DeclSyntaxProtocol,
+        in context: some MacroExpansionContext
+    ) throws -> [DeclSyntax] {
+        []
+    }
+}
+
+// MARK: - MemberMacro（registerAll 生成）
 
 extension InjectableMacro: MemberMacro {
     public static func expansion(
@@ -14,42 +26,31 @@ extension InjectableMacro: MemberMacro {
         in context: some MacroExpansionContext
     ) throws -> [DeclSyntax] {
         guard declaration.is(ClassDeclSyntax.self) else {
-            throw DiagnosticsError(message: "@Injectable は class にのみ適用できます")
+            throw DiagnosticsError(message: "@Injectable can only be applied to classes")
         }
 
-        let properties = extractLazyProperties(from: declaration)
-        guard !properties.isEmpty else {
-            return []
-        }
+        let properties = extractProvidedProperties(from: declaration)
 
         var members: [DeclSyntax] = []
 
-        // registerAll(in:) — 各 lazy var を型キーで登録
-        let registrations = properties.map {
-            "    store.register(\($0.name), as: (\($0.type)).self)"
-        }.joined(separator: "\n")
+        // registerAll(in:)
+        if properties.isEmpty {
+            let registerAllDecl: DeclSyntax = """
+                func registerAll(in store: inout InjectionStore) {}
+                """
+            members.append(registerAllDecl)
+        } else {
+            let registrations = properties.map {
+                "    store.register(\($0.name), as: \($0.interfaceType).self)"
+            }.joined(separator: "\n")
 
-        let registerAllDecl: DeclSyntax = """
-            func registerAll(in store: inout InjectionStore) {
-            \(raw: registrations)
-            }
-            """
-        members.append(registerAllDecl)
-
-        // init（全部 optional、テスト用）
-        let params = properties.map {
-            "\($0.name): (\($0.type))? = nil"
-        }.joined(separator: ", ")
-        let assignments = properties.map {
-            "    if let \($0.name) { self.\($0.name) = \($0.name) }"
-        }.joined(separator: "\n")
-
-        let initDecl: DeclSyntax = """
-            init(\(raw: params)) {
-            \(raw: assignments)
-            }
-            """
-        members.append(initDecl)
+            let registerAllDecl: DeclSyntax = """
+                func registerAll(in store: inout InjectionStore) {
+                \(raw: registrations)
+                }
+                """
+            members.append(registerAllDecl)
+        }
 
         return members
     }
@@ -80,36 +81,55 @@ extension InjectableMacro: ExtensionMacro {
 
 // MARK: - ヘルパー
 
-private struct LazyProperty {
+private struct ProvidedProperty {
     let name: String
-    let type: String
+    let interfaceType: String
 }
 
-/// `lazy var` プロパティを抽出する
-private func extractLazyProperties(from declaration: some DeclGroupSyntax) -> [LazyProperty] {
-    declaration.memberBlock.members.compactMap { member -> LazyProperty? in
+/// `@Provide(as: Type.self)` が付いたプロパティを抽出する
+private func extractProvidedProperties(from declaration: some DeclGroupSyntax) -> [ProvidedProperty] {
+    declaration.memberBlock.members.compactMap { member -> ProvidedProperty? in
         guard let varDecl = member.decl.as(VariableDeclSyntax.self) else {
             return nil
         }
 
-        // lazy 修飾子を持つ
-        let isLazy = varDecl.modifiers.contains { modifier in
-            modifier.name.tokenKind == .keyword(.lazy)
-        }
-        guard isLazy else {
+        // @Provide(as: ...) 属性を探す
+        guard let provideAttr = varDecl.attributes.first(where: { attr in
+            guard case let .attribute(a) = attr,
+                  let identType = a.attributeName.as(IdentifierTypeSyntax.self) else {
+                return false
+            }
+            return identType.name.trimmedDescription == "Provide"
+        }) else {
             return nil
         }
 
-        // バインディングから名前と型を取得
+        // プロパティ名を取得
         guard let binding = varDecl.bindings.first,
-              let pattern = binding.pattern.as(IdentifierPatternSyntax.self),
-              let typeAnnotation = binding.typeAnnotation else {
+              let pattern = binding.pattern.as(IdentifierPatternSyntax.self) else {
             return nil
         }
 
-        return LazyProperty(
+        // @Provide(as: Type.self) から Type を取得
+        guard case let .attribute(attr) = provideAttr,
+              let arguments = attr.arguments?.as(LabeledExprListSyntax.self),
+              let firstArg = arguments.first,
+              firstArg.label?.trimmedDescription == "as" else {
+            return nil
+        }
+
+        // `Type.self` から `Type` を抽出
+        let argExpr = firstArg.expression.trimmedDescription
+        let interfaceType: String
+        if argExpr.hasSuffix(".self") {
+            interfaceType = String(argExpr.dropLast(5))
+        } else {
+            interfaceType = argExpr
+        }
+
+        return ProvidedProperty(
             name: pattern.identifier.trimmedDescription,
-            type: typeAnnotation.type.trimmedDescription
+            interfaceType: interfaceType
         )
     }
 }

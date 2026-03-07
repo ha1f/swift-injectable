@@ -6,6 +6,7 @@ import SwiftInjectableMacrosPlugin
 final class InjectableMacroTests: XCTestCase {
     private let testMacros: [String: Macro.Type] = [
         "Injectable": InjectableMacro.self,
+        "Provide": ProvideMacro.self,
     ]
 
     func testBasicExpansion() {
@@ -13,27 +14,20 @@ final class InjectableMacroTests: XCTestCase {
             """
             @Injectable
             class AppDependencies {
-                lazy var logger: any LoggerProtocol = ConsoleLogger()
-                lazy var apiClient: any APIClientProtocol = LiveAPIClient()
+                @Provide(as: (any LoggerProtocol).self)
+                lazy var logger = ConsoleLogger()
+                @Provide(as: (any APIClientProtocol).self)
+                lazy var apiClient = LiveAPIClient()
             }
             """,
             expandedSource: """
             class AppDependencies {
-                lazy var logger: any LoggerProtocol = ConsoleLogger()
-                lazy var apiClient: any APIClientProtocol = LiveAPIClient()
+                lazy var logger = ConsoleLogger()
+                lazy var apiClient = LiveAPIClient()
 
                 func registerAll(in store: inout InjectionStore) {
                     store.register(logger, as: (any LoggerProtocol).self)
                     store.register(apiClient, as: (any APIClientProtocol).self)
-                }
-
-                init(logger: (any LoggerProtocol)? = nil, apiClient: (any APIClientProtocol)? = nil) {
-                    if let logger {
-                        self.logger = logger
-                    }
-                    if let apiClient {
-                        self.apiClient = apiClient
-                    }
                 }
             }
 
@@ -53,6 +47,9 @@ final class InjectableMacroTests: XCTestCase {
             """,
             expandedSource: """
             class EmptyContainer {
+
+                func registerAll(in store: inout InjectionStore) {
+                }
             }
 
             extension EmptyContainer: InjectableContainer {
@@ -67,21 +64,70 @@ final class InjectableMacroTests: XCTestCase {
             """
             @Injectable
             struct BadContainer {
-                lazy var logger: any LoggerProtocol = ConsoleLogger()
+                @Provide(as: (any LoggerProtocol).self)
+                lazy var logger = ConsoleLogger()
             }
             """,
             expandedSource: """
             struct BadContainer {
-                lazy var logger: any LoggerProtocol = ConsoleLogger()
+                lazy var logger = ConsoleLogger()
             }
             """,
             diagnostics: [
                 DiagnosticSpec(
-                    message: "@Injectable は class にのみ適用できます",
+                    message: "@Injectable can only be applied to classes",
                     line: 1,
                     column: 1
                 ),
             ],
+            macros: testMacros
+        )
+    }
+
+    func testPropertyWithoutProvideIsIgnored() {
+        assertMacroExpansion(
+            """
+            @Injectable
+            class Container {
+                var logger: any LoggerProtocol = ConsoleLogger()
+            }
+            """,
+            expandedSource: """
+            class Container {
+                var logger: any LoggerProtocol = ConsoleLogger()
+
+                func registerAll(in store: inout InjectionStore) {
+                }
+            }
+
+            extension Container: InjectableContainer {
+            }
+            """,
+            macros: testMacros
+        )
+    }
+
+    func testSingleProvideProperty() {
+        assertMacroExpansion(
+            """
+            @Injectable
+            class Container {
+                @Provide(as: (any LoggerProtocol).self)
+                lazy var logger = ConsoleLogger()
+            }
+            """,
+            expandedSource: """
+            class Container {
+                lazy var logger = ConsoleLogger()
+
+                func registerAll(in store: inout InjectionStore) {
+                    store.register(logger, as: (any LoggerProtocol).self)
+                }
+            }
+
+            extension Container: InjectableContainer {
+            }
+            """,
             macros: testMacros
         )
     }
