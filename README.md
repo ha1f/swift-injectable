@@ -320,6 +320,23 @@ func counterIncrements() {
 
 See [`Examples/BasicExample`](Examples/BasicExample) for a complete multi-module app demonstrating `@Injectable`, `@Hook`, `@Injected`, and `withTestInjection` working together.
 
+---
+
+## Known Limitations & Roadmap
+
+### Planned Improvements
+
+- **TaskLocal-based test isolation** — `InjectionOverride` currently uses a `@MainActor static var`, requiring `.serialized` on test suites that use `withTestInjection`. Migrating to `TaskLocal` would allow parallel test execution safely.
+- **Generic struct support for `@Hook`** — `@Hook struct Foo<T>` does not propagate generic parameters to the generated `Storage` class, causing compile errors. Workaround: avoid generic type parameters in stored vars.
+- **Fallback for `@Injected`** — Resolving an unregistered dependency triggers `fatalError` at runtime. A `@Injected(default:)` variant or compile-time validation would improve safety.
+- **Simpler DI registration API** — `store.register(value as any P, as: (any P).self)` is verbose. A shorter API leveraging type inference is desirable.
+- **Lifecycle hooks** — No `useEffect` equivalent. `DynamicProperty.update()` could be leveraged for side effects tied to state changes.
+
+### Design Constraints
+
+- **SwiftUI only** — `@Injected` resolves via SwiftUI `Environment`. It does not work in UIKit or non-UI code.
+- **Type annotations required** — `@Hook` stored vars must have explicit type annotations (`var count: Int = 0`, not `var count = 0`) due to Swift macro limitations.
+
 ## License
 
 MIT License. See [LICENSE](LICENSE) for details.
