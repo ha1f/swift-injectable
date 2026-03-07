@@ -318,21 +318,7 @@ func counterIncrements() {
 
 ## Example App
 
-See [`Examples/BasicExample`](Examples/BasicExample) for a complete multi-module app:
-
-```
-Examples/BasicExample/
-├── Sources/
-│   ├── Domain/           # Protocols, models, use cases
-│   ├── ConsoleLogger/    # LoggerProtocol implementation
-│   ├── LiveAPIClient/    # APIClientProtocol implementation
-│   ├── Presentation/     # @Hook hooks with @Injected
-│   └── App/              # @Injectable container + App entry point
-└── Tests/
-    ├── DomainTests/      # UseCase unit tests
-    ├── PresentationTests/ # Hook tests with withTestInjection
-    └── AppTests/          # Integration tests
-```
+See [`Examples/BasicExample`](Examples/BasicExample) for a complete multi-module app demonstrating `@Injectable`, `@Hook`, `@Injected`, and `withTestInjection` working together.
 
 ## License
 
