@@ -2,8 +2,8 @@ import SwiftDiagnostics
 import SwiftSyntax
 import SwiftSyntaxMacros
 
-/// @Injectable マクロ。@Provide(as:) が付いたプロパティから registerAll を自動生成する。
-public struct InjectableMacro {}
+/// @Provider マクロ。@Provide(as:) が付いたプロパティから registerAll を自動生成する。
+public struct ProviderMacro {}
 
 /// @Provide マクロ。マーカーとして機能し、コード生成は行わない。
 public struct ProvideMacro: PeerMacro {
@@ -18,7 +18,7 @@ public struct ProvideMacro: PeerMacro {
 
 // MARK: - MemberMacro（registerAll 生成）
 
-extension InjectableMacro: MemberMacro {
+extension ProviderMacro: MemberMacro {
     public static func expansion(
         of node: AttributeSyntax,
         providingMembersOf declaration: some DeclGroupSyntax,
@@ -26,7 +26,7 @@ extension InjectableMacro: MemberMacro {
         in context: some MacroExpansionContext
     ) throws -> [DeclSyntax] {
         guard declaration.is(ClassDeclSyntax.self) else {
-            throw DiagnosticsError(message: "@Injectable can only be applied to classes")
+            throw DiagnosticsError(message: "@Provider can only be applied to classes")
         }
 
         let properties = extractProvidedProperties(from: declaration)
@@ -56,9 +56,9 @@ extension InjectableMacro: MemberMacro {
     }
 }
 
-// MARK: - ExtensionMacro（InjectableContainer 準拠）
+// MARK: - ExtensionMacro（DependencyProvider 準拠）
 
-extension InjectableMacro: ExtensionMacro {
+extension ProviderMacro: ExtensionMacro {
     public static func expansion(
         of node: AttributeSyntax,
         attachedTo declaration: some DeclGroupSyntax,
@@ -70,7 +70,7 @@ extension InjectableMacro: ExtensionMacro {
             return []
         }
         let ext: DeclSyntax = """
-            extension \(type.trimmed): InjectableContainer {}
+            extension \(type.trimmed): DependencyProvider {}
             """
         guard let extDecl = ext.as(ExtensionDeclSyntax.self) else {
             return []

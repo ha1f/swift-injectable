@@ -3,16 +3,16 @@ import SwiftSyntaxMacrosTestSupport
 import XCTest
 import SwiftInjectableMacrosPlugin
 
-final class InjectableMacroTests: XCTestCase {
+final class ProviderMacroTests: XCTestCase {
     private let testMacros: [String: Macro.Type] = [
-        "Injectable": InjectableMacro.self,
+        "Provider": ProviderMacro.self,
         "Provide": ProvideMacro.self,
     ]
 
     func testBasicExpansion() {
         assertMacroExpansion(
             """
-            @Injectable
+            @Provider
             class AppDependencies {
                 @Provide(as: (any LoggerProtocol).self)
                 lazy var logger = ConsoleLogger()
@@ -31,7 +31,7 @@ final class InjectableMacroTests: XCTestCase {
                 }
             }
 
-            extension AppDependencies: InjectableContainer {
+            extension AppDependencies: DependencyProvider {
             }
             """,
             macros: testMacros
@@ -41,7 +41,7 @@ final class InjectableMacroTests: XCTestCase {
     func testEmptyClass() {
         assertMacroExpansion(
             """
-            @Injectable
+            @Provider
             class EmptyContainer {
             }
             """,
@@ -52,7 +52,7 @@ final class InjectableMacroTests: XCTestCase {
                 }
             }
 
-            extension EmptyContainer: InjectableContainer {
+            extension EmptyContainer: DependencyProvider {
             }
             """,
             macros: testMacros
@@ -62,7 +62,7 @@ final class InjectableMacroTests: XCTestCase {
     func testStructProducesError() {
         assertMacroExpansion(
             """
-            @Injectable
+            @Provider
             struct BadContainer {
                 @Provide(as: (any LoggerProtocol).self)
                 lazy var logger = ConsoleLogger()
@@ -75,7 +75,7 @@ final class InjectableMacroTests: XCTestCase {
             """,
             diagnostics: [
                 DiagnosticSpec(
-                    message: "@Injectable can only be applied to classes",
+                    message: "@Provider can only be applied to classes",
                     line: 1,
                     column: 1
                 ),
@@ -87,7 +87,7 @@ final class InjectableMacroTests: XCTestCase {
     func testPropertyWithoutProvideIsIgnored() {
         assertMacroExpansion(
             """
-            @Injectable
+            @Provider
             class Container {
                 var logger: any LoggerProtocol = ConsoleLogger()
             }
@@ -100,7 +100,7 @@ final class InjectableMacroTests: XCTestCase {
                 }
             }
 
-            extension Container: InjectableContainer {
+            extension Container: DependencyProvider {
             }
             """,
             macros: testMacros
@@ -110,7 +110,7 @@ final class InjectableMacroTests: XCTestCase {
     func testSingleProvideProperty() {
         assertMacroExpansion(
             """
-            @Injectable
+            @Provider
             class Container {
                 @Provide(as: (any LoggerProtocol).self)
                 lazy var logger = ConsoleLogger()
@@ -125,7 +125,7 @@ final class InjectableMacroTests: XCTestCase {
                 }
             }
 
-            extension Container: InjectableContainer {
+            extension Container: DependencyProvider {
             }
             """,
             macros: testMacros

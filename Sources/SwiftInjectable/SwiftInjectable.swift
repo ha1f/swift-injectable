@@ -2,28 +2,28 @@ import SwiftUI
 
 // MARK: - マクロ宣言
 
-/// DI container に `registerAll` メソッドと `init` を自動生成する。
+/// DI container に `registerAll` メソッドを自動生成する。
 /// `@Provide(as:)` が付いたプロパティを読み取り、各依存を `InjectionStore` に個別登録する。
 @attached(member, names: named(registerAll))
-@attached(extension, conformances: InjectableContainer)
-public macro Injectable() = #externalMacro(
+@attached(extension, conformances: DependencyProvider)
+public macro Provider() = #externalMacro(
     module: "SwiftInjectableMacrosPlugin",
-    type: "InjectableMacro"
+    type: "ProviderMacro"
 )
 
-/// `@Injectable` クラス内のプロパティに付けて、登録するインターフェース型を指定する。
+/// `@Provider` クラス内のプロパティに付けて、登録するインターフェース型を指定する。
 @attached(peer)
 public macro Provide<T>(as type: T.Type) = #externalMacro(
     module: "SwiftInjectableMacrosPlugin",
     type: "ProvideMacro"
 )
 
-// MARK: - InjectableContainer プロトコル
+// MARK: - DependencyProvider プロトコル
 
-/// `@Injectable` を付けたクラスが準拠するプロトコル。
+/// `@Provider` を付けたクラスが準拠するプロトコル。
 /// `injectAll()` で Environment に全依存を一括登録するために使う。
 @MainActor
-public protocol InjectableContainer {
+public protocol DependencyProvider {
     func registerAll(in store: inout InjectionStore)
 }
 
@@ -130,7 +130,7 @@ extension View {
 
     /// `@Injectable` container の全依存を一括で Environment に注入する。
     @MainActor
-    public func injectAll(_ container: some InjectableContainer) -> some View {
+    public func injectAll(_ container: some DependencyProvider) -> some View {
         self.transformEnvironment(\.injectionStore) { store in
             MainActor.assumeIsolated {
                 container.registerAll(in: &store)

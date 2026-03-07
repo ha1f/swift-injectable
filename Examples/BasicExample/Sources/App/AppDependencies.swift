@@ -4,10 +4,9 @@ import LiveAPIClient
 import SwiftInjectable
 
 /// アプリ全体の依存コンテナ。
-/// `@Provide(as:)` で登録するインターフェース型を明示し、@Injectable が registerAll と init を生成する。
-/// テスト時は `AppDependencies(logger: MockLogger())` のように部分的に差し替え可能。
+/// `@Provide(as:)` で登録するインターフェース型を明示し、@Provider が registerAll を生成する。
 @MainActor
-@Injectable
+@Provider
 class AppDependencies {
     @Provide(as: (any LoggerProtocol).self)
     lazy var logger = ConsoleLogger()

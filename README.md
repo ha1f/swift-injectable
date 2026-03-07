@@ -55,11 +55,11 @@ protocol APIClientProtocol: Sendable {
 
 ### 2. Create a dependency container
 
-Use `@Injectable` on a class and `@Provide(as:)` on each property to declare the protocol it fulfills:
+Use `@Provider` on a class and `@Provide(as:)` on each property to declare the protocol it fulfills:
 
 ```swift
 @MainActor
-@Injectable
+@Provider
 class AppDependencies {
     @Provide(as: (any LoggerProtocol).self)
     lazy var logger = ConsoleLogger()
@@ -72,9 +72,9 @@ class AppDependencies {
 }
 ```
 
-`@Injectable` generates:
+`@Provider` generates:
 - `registerAll(in:)` — registers each `@Provide`-annotated property into `InjectionStore`
-- `InjectableContainer` protocol conformance
+- `DependencyProvider` protocol conformance
 
 ### 3. Inject at the root
 
@@ -295,8 +295,8 @@ func counterIncrements() {
 
 | Macro | Library | Description |
 |---|---|---|
-| `@Injectable` | SwiftInjectable | Generates `registerAll(in:)` and `InjectableContainer` conformance for a class. |
-| `@Provide(as: Type.self)` | SwiftInjectable | Marks a property in an `@Injectable` class for registration under the given protocol type. |
+| `@Provider` | SwiftInjectable | Generates `registerAll(in:)` and `DependencyProvider` conformance for a class. |
+| `@Provide(as: Type.self)` | SwiftInjectable | Marks a property in a `@Provider` class for registration under the given protocol type. |
 | `@Hook` | SwiftHooks | Generates `@Observable` storage, init, computed properties, and `DynamicProperty` conformance for a struct. |
 
 ### Property Wrapper
@@ -309,7 +309,7 @@ func counterIncrements() {
 
 | Modifier | Description |
 |---|---|
-| `.injectAll(_:)` | Registers all dependencies from an `InjectableContainer` into the environment. |
+| `.injectAll(_:)` | Registers all dependencies from a `DependencyProvider` into the environment. |
 | `.inject(_:as:)` | Registers a single dependency by type into the environment. |
 
 ### Testing Utilities
@@ -342,7 +342,7 @@ func counterIncrements() {
 
 ## Example App
 
-See [`Examples/BasicExample`](Examples/BasicExample) for a complete multi-module app demonstrating `@Injectable`, `@Hook`, `@Injected`, and `withTestInjection` working together.
+See [`Examples/BasicExample`](Examples/BasicExample) for a complete multi-module app demonstrating `@Provider`, `@Hook`, `@Injected`, and `withTestInjection` working together.
 
 ---
 

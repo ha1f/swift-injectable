@@ -12,7 +12,7 @@ Sources/
 ├── ConsoleLogger/    # LoggerProtocol implementation
 ├── LiveAPIClient/    # APIClientProtocol implementation
 ├── Presentation/     # @Hook hooks with @Injected + CounterView (depends on Domain + SwiftInjectable + SwiftHooks)
-└── App/              # @Injectable container + SwiftUI App entry point
+└── App/              # @Provider container + SwiftUI App entry point
 Tests/
 ├── DomainTests/       # UseCase unit tests
 ├── PresentationTests/ # Hook tests (UseCounter, UseCounterView, UseFetchUser)
@@ -21,8 +21,8 @@ Tests/
 
 ## What This Example Demonstrates
 
-### DI with `@Injectable` + `@Injected`
-- `App/AppDependencies.swift` — composition root using `@Injectable` and `@Provide(as:)`
+### DI with `@Provider` + `@Injected`
+- `App/AppDependencies.swift` — composition root using `@Provider` and `@Provide(as:)`
 - `App/App.swift` — injects dependencies at the root with `.injectAll()`
 - `Presentation/UseFetchUser.swift` — resolves dependencies with `@Injected`
 

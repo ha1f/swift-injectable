@@ -4,7 +4,7 @@ import SwiftSyntaxMacros
 @main
 struct SwiftInjectableMacrosPlugin: CompilerPlugin {
     let providingMacros: [Macro.Type] = [
-        InjectableMacro.self,
+        ProviderMacro.self,
         ProvideMacro.self,
     ]
 }
