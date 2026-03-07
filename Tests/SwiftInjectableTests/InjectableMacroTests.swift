@@ -26,8 +26,8 @@ final class InjectableMacroTests: XCTestCase {
                 lazy var apiClient = LiveAPIClient()
 
                 func registerAll(in store: inout InjectionStore) {
-                    store.register(logger, as: (any LoggerProtocol).self)
-                    store.register(apiClient, as: (any APIClientProtocol).self)
+                    store.register(logger, for: (any LoggerProtocol).self)
+                    store.register(apiClient, for: (any APIClientProtocol).self)
                 }
             }
 
@@ -121,7 +121,7 @@ final class InjectableMacroTests: XCTestCase {
                 lazy var logger = ConsoleLogger()
 
                 func registerAll(in store: inout InjectionStore) {
-                    store.register(logger, as: (any LoggerProtocol).self)
+                    store.register(logger, for: (any LoggerProtocol).self)
                 }
             }
 

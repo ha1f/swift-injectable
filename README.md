@@ -116,7 +116,7 @@ You can also inject dependencies one at a time without a container:
 
 ```swift
 ContentView()
-    .inject(ConsoleLogger() as any LoggerProtocol, as: (any LoggerProtocol).self)
+    .inject(ConsoleLogger(), as: (any LoggerProtocol).self)
 ```
 
 ---
@@ -318,7 +318,7 @@ func counterIncrements() {
 |---|---|
 | `withTestInjection(configure:perform:)` | Overrides `@Injected` resolution for the duration of `perform`. Uses `TaskLocal` for safe parallel testing. |
 | `InjectionOverride` | `TaskLocal`-based store used by `withTestInjection`. Not intended for direct use. |
-| `InjectionStore` | Type-keyed dependency storage. Use `register(_:as:)`, `register(_:for:)`, and `resolve(_:)`. |
+| `InjectionStore` | Type-keyed dependency storage. Use `register(_:for:)` and `resolve(_:)`. |
 
 ---
 

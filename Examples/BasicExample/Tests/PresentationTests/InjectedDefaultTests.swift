@@ -22,7 +22,7 @@ struct InjectedDefaultTests {
         mockLogger.logHandler = { _ in }
 
         await withTestInjection(configure: { store in
-            store.register(mockLogger as any LoggerProtocol, as: (any LoggerProtocol).self)
+            store.register(mockLogger, for: (any LoggerProtocol).self)
         }) {
             @Injected(default: StubLogger()) var logger: any LoggerProtocol
             logger.log("test")

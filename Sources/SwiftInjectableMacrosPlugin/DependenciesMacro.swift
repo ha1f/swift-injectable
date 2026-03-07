@@ -41,7 +41,7 @@ extension InjectableMacro: MemberMacro {
             members.append(registerAllDecl)
         } else {
             let registrations = properties.map {
-                "    store.register(\($0.name), as: \($0.interfaceType).self)"
+                "    store.register(\($0.name), for: \($0.interfaceType).self)"
             }.joined(separator: "\n")
 
             let registerAllDecl: DeclSyntax = """

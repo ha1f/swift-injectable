@@ -35,13 +35,6 @@ public struct InjectionStore: @unchecked Sendable {
 
     public init() {}
 
-    public mutating func register<D>(_ value: D, as type: D.Type) {
-        values[ObjectIdentifier(type)] = value
-    }
-
-    /// 値の型とキーの型が異なる場合のオーバーロード。
-    /// `store.register(myImpl, for: (any MyProtocol).self)` のように
-    /// キャスト不要で登録できる。
     public mutating func register<Value, Key>(_ value: Value, for type: Key.Type) {
         values[ObjectIdentifier(type)] = value
     }
@@ -129,9 +122,9 @@ public struct Injected<D>: DynamicProperty {
 
 extension View {
     /// 単一の依存を型をキーにして Environment に注入する。
-    public func inject<D>(_ value: D, as type: D.Type) -> some View {
+    public func inject<Value, Key>(_ value: Value, as type: Key.Type) -> some View {
         self.transformEnvironment(\.injectionStore) { store in
-            store.register(value, as: type)
+            store.register(value, for: type)
         }
     }
 

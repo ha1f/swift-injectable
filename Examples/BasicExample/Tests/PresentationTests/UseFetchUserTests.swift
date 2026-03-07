@@ -18,8 +18,8 @@ struct UseFetchUserTests {
         mockLogger.logHandler = { _ in }
 
         await withTestInjection(configure: { store in
-            store.register(mockUseCase as any UserUseCaseProtocol, as: (any UserUseCaseProtocol).self)
-            store.register(mockLogger as any LoggerProtocol, as: (any LoggerProtocol).self)
+            store.register(mockUseCase, for: (any UserUseCaseProtocol).self)
+            store.register(mockLogger, for: (any LoggerProtocol).self)
         }) {
             let fetchUser = UseFetchUser()
 
@@ -52,8 +52,8 @@ struct UseFetchUserTests {
         mockLogger.logHandler = { _ in }
 
         await withTestInjection(configure: { store in
-            store.register(mockUseCase as any UserUseCaseProtocol, as: (any UserUseCaseProtocol).self)
-            store.register(mockLogger as any LoggerProtocol, as: (any LoggerProtocol).self)
+            store.register(mockUseCase, for: (any UserUseCaseProtocol).self)
+            store.register(mockLogger, for: (any LoggerProtocol).self)
         }) {
             let fetchUser = UseFetchUser()
             await fetchUser.fetch(userId: 1)
@@ -79,8 +79,8 @@ struct UseFetchUserTests {
         mockLogger.logHandler = { _ in }
 
         await withTestInjection(configure: { store in
-            store.register(mockUseCase as any UserUseCaseProtocol, as: (any UserUseCaseProtocol).self)
-            store.register(mockLogger as any LoggerProtocol, as: (any LoggerProtocol).self)
+            store.register(mockUseCase, for: (any UserUseCaseProtocol).self)
+            store.register(mockLogger, for: (any LoggerProtocol).self)
         }) {
             let fetchUser = UseFetchUser()
 
