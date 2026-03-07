@@ -39,6 +39,13 @@ public struct InjectionStore: @unchecked Sendable {
         values[ObjectIdentifier(type)] = value
     }
 
+    /// 値の型とキーの型が異なる場合のオーバーロード。
+    /// `store.register(myImpl, for: (any MyProtocol).self)` のように
+    /// キャスト不要で登録できる。
+    public mutating func register<Value, Key>(_ value: Value, for type: Key.Type) {
+        values[ObjectIdentifier(type)] = value
+    }
+
     public func resolve<D>(_ type: D.Type) -> D? {
         values[ObjectIdentifier(type)] as? D
     }

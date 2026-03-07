@@ -221,7 +221,7 @@ The key insight: `@Hook` stores state in an `@Observable` class (reference type)
 `withTestInjection` overrides `@Injected` resolution for the duration of the closure, allowing you to test `DynamicProperty` hooks without a SwiftUI view hierarchy:
 
 ```swift
-@Suite("UseFetchUser", .serialized)
+@Suite("UseFetchUser")
 @MainActor
 struct UseFetchUserTests {
 
@@ -235,14 +235,8 @@ struct UseFetchUserTests {
         mockLogger.logHandler = { _ in }
 
         await withTestInjection(configure: { store in
-            store.register(
-                mockUseCase as any UserUseCaseProtocol,
-                as: (any UserUseCaseProtocol).self
-            )
-            store.register(
-                mockLogger as any LoggerProtocol,
-                as: (any LoggerProtocol).self
-            )
+            store.register(mockUseCase, for: (any UserUseCaseProtocol).self)
+            store.register(mockLogger, for: (any LoggerProtocol).self)
         }) {
             let hook = UseFetchUser()
             await hook.fetch(userId: 42)
@@ -302,7 +296,7 @@ func counterIncrements() {
 |---|---|
 | `withTestInjection(configure:perform:)` | Overrides `@Injected` resolution for the duration of `perform`. Uses `TaskLocal` for safe parallel testing. |
 | `InjectionOverride` | `TaskLocal`-based store used by `withTestInjection`. Not intended for direct use. |
-| `InjectionStore` | Type-keyed dependency storage. Use `register(_:as:)` and `resolve(_:)`. |
+| `InjectionStore` | Type-keyed dependency storage. Use `register(_:as:)`, `register(_:for:)`, and `resolve(_:)`. |
 
 ---
 
@@ -335,7 +329,6 @@ See [`Examples/BasicExample`](Examples/BasicExample) for a complete multi-module
 ### Planned Improvements
 
 - **Generic struct support for `@Hook`** — `@Hook struct Foo<T>` does not propagate generic parameters to the generated `Storage` class, causing compile errors. Workaround: avoid generic type parameters in stored vars.
-- **Simpler DI registration API** — `store.register(value as any P, as: (any P).self)` is verbose. A shorter API leveraging type inference is desirable.
 - **Lifecycle hooks** — No `useEffect` equivalent. `DynamicProperty.update()` could be leveraged for side effects tied to state changes.
 
 ### Design Constraints

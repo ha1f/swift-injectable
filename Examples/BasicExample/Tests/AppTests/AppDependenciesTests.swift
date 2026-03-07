@@ -34,6 +34,16 @@ struct AppDependenciesTests {
         #expect(store.resolve((any APIClientProtocol).self) != nil)
     }
 
+    @Test("register(_:for:) でキャスト不要で登録できる")
+    func registerFor() {
+        var store = InjectionStore()
+        let logger = ConsoleLogger()
+        store.register(logger, for: (any LoggerProtocol).self)
+
+        let resolved = store.resolve((any LoggerProtocol).self)
+        #expect(resolved != nil)
+    }
+
     @Test("依存チェーン: UserUseCase が apiClient を使える")
     func dependencyChaining() async throws {
         let apiClient = LiveAPIClient()
