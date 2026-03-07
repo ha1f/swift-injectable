@@ -82,10 +82,16 @@ public func withTestInjection(
 
 /// Environment から依存を型で取得する property wrapper。
 /// テスト時は `InjectionOverride` が設定されていればそちらを優先する。
-/// 使い方: `@Injected var logger: any LoggerProtocol`
+///
+/// 使い方:
+/// ```swift
+/// @Injected var logger: any LoggerProtocol
+/// @Injected(default: ConsoleLogger()) var logger: any LoggerProtocol
+/// ```
 @propertyWrapper
 public struct Injected<D>: DynamicProperty {
     @Environment(\.injectionStore) private var store
+    private let defaultValue: D?
 
     public var wrappedValue: D {
         // テスト用オーバーライドを優先（TaskLocal）
@@ -93,13 +99,23 @@ public struct Injected<D>: DynamicProperty {
            let value = override.resolve(D.self) {
             return value
         }
-        guard let value = store.resolve(D.self) else {
-            fatalError("\(D.self) not found. Did you forget to call .inject() or .injectAll()?")
+        if let value = store.resolve(D.self) {
+            return value
         }
-        return value
+        if let defaultValue {
+            return defaultValue
+        }
+        fatalError("\(D.self) not found. Did you forget to call .inject() or .injectAll()?")
     }
 
-    public init() {}
+    public init() {
+        self.defaultValue = nil
+    }
+
+    /// デフォルト値付き。未登録時に fatalError ではなく defaultValue を返す。
+    public init(default defaultValue: D) {
+        self.defaultValue = defaultValue
+    }
 }
 
 // MARK: - View extension

@@ -102,6 +102,14 @@ struct ContentView: View {
 }
 ```
 
+### Default values
+
+Use `@Injected(default:)` to provide a fallback when a dependency is not registered:
+
+```swift
+@Injected(default: ConsoleLogger()) var logger: any LoggerProtocol
+```
+
 ### Injecting individual dependencies
 
 You can also inject dependencies one at a time without a container:
@@ -327,7 +335,6 @@ See [`Examples/BasicExample`](Examples/BasicExample) for a complete multi-module
 ### Planned Improvements
 
 - **Generic struct support for `@Hook`** — `@Hook struct Foo<T>` does not propagate generic parameters to the generated `Storage` class, causing compile errors. Workaround: avoid generic type parameters in stored vars.
-- **Fallback for `@Injected`** — Resolving an unregistered dependency triggers `fatalError` at runtime. A `@Injected(default:)` variant or compile-time validation would improve safety.
 - **Simpler DI registration API** — `store.register(value as any P, as: (any P).self)` is verbose. A shorter API leveraging type inference is desirable.
 - **Lifecycle hooks** — No `useEffect` equivalent. `DynamicProperty.update()` could be leveraged for side effects tied to state changes.
 
