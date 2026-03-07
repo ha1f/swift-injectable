@@ -2,6 +2,7 @@ import SwiftInjectableMacros
 
 @Dependencies
 struct AppDependencies {
-    var userUseCase: any UserUseCaseProtocol = UserUseCase(apiClient: LiveAPIClient())
-    var logger: any LoggerProtocol = ConsoleLogger()
+    var apiClient: any APIClientProtocol { _apiClient ?? LiveAPIClient() }
+    var logger: any LoggerProtocol { _logger ?? ConsoleLogger() }
+    var userUseCase: any UserUseCaseProtocol { _userUseCase ?? UserUseCase(apiClient: apiClient) }
 }

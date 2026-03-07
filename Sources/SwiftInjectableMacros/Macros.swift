@@ -3,7 +3,7 @@
 // MARK: - マクロ宣言
 
 /// ViewModifier 準拠（body）を自動生成する。
-@attached(member, names: named(body))
+@attached(member, names: named(body), named(init), arbitrary)
 @attached(extension, conformances: ViewModifier)
 public macro Dependencies() = #externalMacro(
     module: "SwiftInjectableMacrosPlugin",

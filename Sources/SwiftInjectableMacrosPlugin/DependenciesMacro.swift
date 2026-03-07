@@ -1,10 +1,10 @@
 import SwiftSyntax
 import SwiftSyntaxMacros
 
-/// @Dependencies マクロ。ViewModifier 準拠（body）を自動生成する。
+/// @Dependencies マクロ。backing storage、init、ViewModifier 準拠を自動生成する。
 public struct DependenciesMacro {}
 
-// MARK: - MemberMacro（body 生成）
+// MARK: - MemberMacro
 
 extension DependenciesMacro: MemberMacro {
     public static func expansion(
@@ -17,11 +17,31 @@ extension DependenciesMacro: MemberMacro {
             throw DiagnosticsError(message: "@Dependencies は struct にのみ適用できます")
         }
 
-        let properties = extractStoredProperties(from: declaration)
+        let properties = extractComputedProperties(from: declaration)
         guard !properties.isEmpty else {
             return []
         }
 
+        var members: [DeclSyntax] = []
+
+        // backing storage（_name: Type?）
+        for prop in properties {
+            let storage: DeclSyntax = "var _\(raw: prop.name): (\(raw: prop.type))?"
+            members.append(storage)
+        }
+
+        // init（全部 optional）
+        let params = properties.map { "_ \($0.name): (\($0.type))? = nil" }.joined(separator: ", ")
+        let assignments = properties.map { "self._\($0.name) = \($0.name)" }.joined(separator: "\n    ")
+
+        let initDecl: DeclSyntax = """
+            init(\(raw: params)) {
+                \(raw: assignments)
+            }
+            """
+        members.append(initDecl)
+
+        // ViewModifier body
         let body: DeclSyntax = """
             func body(content: Content) -> some View {
                 content
@@ -30,8 +50,9 @@ extension DependenciesMacro: MemberMacro {
                     }
             }
             """
+        members.append(body)
 
-        return [body]
+        return members
     }
 }
 
@@ -62,13 +83,14 @@ extension DependenciesMacro: ExtensionMacro {
 
 // MARK: - ヘルパー
 
-private struct StoredProperty {
+private struct ComputedProperty {
     let name: String
     let type: String
 }
 
-private func extractStoredProperties(from declaration: some DeclGroupSyntax) -> [StoredProperty] {
-    declaration.memberBlock.members.compactMap { member -> StoredProperty? in
+/// getter のみの computed property を抽出する
+private func extractComputedProperties(from declaration: some DeclGroupSyntax) -> [ComputedProperty] {
+    declaration.memberBlock.members.compactMap { member -> ComputedProperty? in
         guard let varDecl = member.decl.as(VariableDeclSyntax.self) else {
             return nil
         }
@@ -84,12 +106,20 @@ private func extractStoredProperties(from declaration: some DeclGroupSyntax) -> 
             return nil
         }
 
-        guard binding.accessorBlock == nil else {
+        // computed property（accessor block あり）のみ対象
+        guard binding.accessorBlock != nil else {
             return nil
         }
 
-        return StoredProperty(
-            name: pattern.identifier.trimmedDescription,
+        let name = pattern.identifier.trimmedDescription
+
+        // _prefix は backing storage なのでスキップ
+        guard !name.hasPrefix("_") else {
+            return nil
+        }
+
+        return ComputedProperty(
+            name: name,
             type: typeAnnotation.type.trimmedDescription
         )
     }
