@@ -364,6 +364,62 @@ final class HookMacroTests: XCTestCase {
         )
     }
 
+    // MARK: - ジェネリック struct
+
+    func testGenericStruct() {
+        assertMacroExpansion(
+            """
+            @Hook
+            struct UseValue<T> {
+                var value: T
+            }
+            """,
+            expandedSource: """
+            struct UseValue<T> {
+                var value: T {
+                    @storageRestrictions(initializes: _hook_backing_value)
+                    init(initialValue) {
+                        _hook_backing_value = initialValue
+                    }
+                    get {
+                        hookStorage.value
+                    }
+                    nonmutating set {
+                        hookStorage.value = newValue
+                    }
+                }
+
+                private var _hook_backing_value: T
+
+                @Observable
+                final class Storage {
+                    var value: T
+                    init(
+                        value: T
+                    ) {
+                            self.value = value
+                    }
+                }
+
+                @SwiftUI.State private var hookStorage: Storage
+
+                init(
+                        value: T
+                ) {
+                    self.value = value
+                    _hookStorage = SwiftUI.State(initialValue: Storage(
+                            value: value
+                    ))
+                }
+            }
+
+            extension UseValue: DynamicProperty {
+            }
+            """,
+            macros: testMacros
+        )
+    }
+
     // MARK: - 型注釈なしはエラー
 
     func testMissingTypeAnnotationProducesError() {
