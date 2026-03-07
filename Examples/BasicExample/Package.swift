@@ -55,7 +55,28 @@ let package = Package(
                 "Domain",
                 .product(name: "Mockable", package: "swift-mockable"),
             ],
-            path: "Tests"
+            path: "Tests/DomainTests"
+        ),
+        .testTarget(
+            name: "PresentationTests",
+            dependencies: [
+                "Domain",
+                "Presentation",
+                .product(name: "SwiftInjectable", package: "swift-injectable"),
+                .product(name: "Mockable", package: "swift-mockable"),
+            ],
+            path: "Tests/PresentationTests"
+        ),
+        .testTarget(
+            name: "AppTests",
+            dependencies: [
+                "Domain",
+                "ConsoleLogger",
+                "LiveAPIClient",
+                .product(name: "SwiftInjectable", package: "swift-injectable"),
+                .product(name: "Mockable", package: "swift-mockable"),
+            ],
+            path: "Tests/AppTests"
         ),
     ],
     swiftLanguageModes: [.v6]
