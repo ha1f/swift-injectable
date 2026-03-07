@@ -196,6 +196,28 @@ Given `var count: Int = 0`, the macro generates:
 - **Type annotations are required** on stored vars: `var count: Int = 0` (not `var count = 0`). A compile-time error is emitted if the annotation is missing.
 - `@Hook` can only be applied to structs.
 
+### Lifecycle (`update()`)
+
+`@Hook` structs can implement `DynamicProperty.update()` for side effects that run before each view body evaluation:
+
+```swift
+@Hook
+@MainActor
+struct UseAutoRefresh {
+    @Injected var api: any APIClientProtocol
+    var items: [Item] = []
+    var needsRefresh: Bool = true
+
+    mutating func update() {
+        guard needsRefresh else { return }
+        needsRefresh = false
+        Task { items = try await api.fetchItems() }
+    }
+}
+```
+
+> **Note:** `update()` is called by SwiftUI only — it does not run in tests. For testable side effects, use explicit methods like `fetch()`.
+
 ### Hooks without state
 
 If there are no stored vars, `@Hook` simply adds `DynamicProperty` conformance without generating a `Storage` class:
@@ -329,7 +351,7 @@ See [`Examples/BasicExample`](Examples/BasicExample) for a complete multi-module
 ### Planned Improvements
 
 - **Generic struct support for `@Hook`** — `@Hook struct Foo<T>` does not propagate generic parameters to the generated `Storage` class, causing compile errors. Workaround: avoid generic type parameters in stored vars.
-- **Lifecycle hooks** — No `useEffect` equivalent. `DynamicProperty.update()` could be leveraged for side effects tied to state changes.
+- **Richer lifecycle hooks** — `DynamicProperty.update()` is available but limited (no dependency tracking, no cleanup, not called in tests). A `useEffect`-like API with change detection would be more powerful.
 
 ### Design Constraints
 
