@@ -24,6 +24,10 @@ public struct FeatureView: View {
             NavigationLink("User Detail") {
                 UserDetailView(userId: 42)
             }
+
+            NavigationLink("Counter") {
+                CounterView()
+            }
         }
         .padding()
     }
