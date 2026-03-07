@@ -18,7 +18,7 @@ extension HookMacro: MemberMacro {
             throw DiagnosticsError(message: "@Hook can only be applied to structs")
         }
 
-        let storedVars = extractStoredVars(from: declaration)
+        let storedVars = extractStoredVars(from: declaration, in: context)
 
         // stored var がなければ Storage は生成しない
         if storedVars.isEmpty {
@@ -112,7 +112,7 @@ extension HookMacro: MemberAttributeMacro {
     ) throws -> [AttributeSyntax] {
         guard declaration.is(StructDeclSyntax.self),
               let varDecl = member.as(VariableDeclSyntax.self),
-              isStoredVar(varDecl) else {
+              isStoredVarWithTypeAnnotation(varDecl) else {
             return []
         }
         return [AttributeSyntax(attributeName: IdentifierTypeSyntax(name: .identifier("_HookAccessor")))]
@@ -144,14 +144,17 @@ extension HookMacro: ExtensionMacro {
 
 // MARK: - ヘルパー
 
-struct StoredVarInfo {
+private struct StoredVarInfo {
     let name: String
     let type: String
     let defaultValue: String?
 }
 
 /// stored var を抽出する（型注釈必須）
-func extractStoredVars(from declaration: some DeclGroupSyntax) -> [StoredVarInfo] {
+private func extractStoredVars(
+    from declaration: some DeclGroupSyntax,
+    in context: some MacroExpansionContext
+) -> [StoredVarInfo] {
     declaration.memberBlock.members.compactMap { member -> StoredVarInfo? in
         guard let varDecl = member.decl.as(VariableDeclSyntax.self),
               isStoredVar(varDecl) else {
@@ -164,6 +167,11 @@ func extractStoredVars(from declaration: some DeclGroupSyntax) -> [StoredVarInfo
         }
 
         guard let typeAnnotation = binding.typeAnnotation else {
+            // 型注釈なしの stored var はエラー
+            context.diagnose(Diagnostic(
+                node: varDecl,
+                message: HookDiagnosticMessage.missingTypeAnnotation(name: pattern.identifier.trimmedDescription)
+            ))
             return nil
         }
 
@@ -175,8 +183,8 @@ func extractStoredVars(from declaration: some DeclGroupSyntax) -> [StoredVarInfo
     }
 }
 
-/// stored var かどうか判定する
-func isStoredVar(_ varDecl: VariableDeclSyntax) -> Bool {
+/// stored var かどうか判定する（型注釈の有無は問わない）
+private func isStoredVar(_ varDecl: VariableDeclSyntax) -> Bool {
     // let は除外（sub-hook や定数）
     guard varDecl.bindingSpecifier.tokenKind == .keyword(.var) else {
         return false
@@ -204,7 +212,33 @@ func isStoredVar(_ varDecl: VariableDeclSyntax) -> Bool {
     return true
 }
 
+/// stored var かつ型注釈ありかどうか判定する
+private func isStoredVarWithTypeAnnotation(_ varDecl: VariableDeclSyntax) -> Bool {
+    guard isStoredVar(varDecl),
+          let binding = varDecl.bindings.first,
+          binding.typeAnnotation != nil else {
+        return false
+    }
+    return true
+}
+
+// MARK: - Diagnostics
+
 private struct DiagnosticsError: Error, CustomStringConvertible {
     let message: String
     var description: String { message }
+}
+
+private struct HookDiagnosticMessage: DiagnosticMessage {
+    let message: String
+    let diagnosticID: MessageID
+    let severity: DiagnosticSeverity
+
+    static func missingTypeAnnotation(name: String) -> Self {
+        HookDiagnosticMessage(
+            message: "@Hook requires type annotation on stored property '\(name)'. Write 'var \(name): Type = ...' instead.",
+            diagnosticID: MessageID(domain: "SwiftHooksMacrosPlugin", id: "missingTypeAnnotation"),
+            severity: .error
+        )
+    }
 }

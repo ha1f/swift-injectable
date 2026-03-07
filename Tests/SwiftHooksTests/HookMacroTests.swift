@@ -363,4 +363,33 @@ final class HookMacroTests: XCTestCase {
             macros: testMacros
         )
     }
+
+    // MARK: - 型注釈なしはエラー
+
+    func testMissingTypeAnnotationProducesError() {
+        assertMacroExpansion(
+            """
+            @Hook
+            struct UseCounter {
+                var count = 0
+            }
+            """,
+            expandedSource: """
+            struct UseCounter {
+                var count = 0
+            }
+
+            extension UseCounter: DynamicProperty {
+            }
+            """,
+            diagnostics: [
+                DiagnosticSpec(
+                    message: "@Hook requires type annotation on stored property 'count'. Write 'var count: Type = ...' instead.",
+                    line: 3,
+                    column: 5
+                ),
+            ],
+            macros: testMacros
+        )
+    }
 }
