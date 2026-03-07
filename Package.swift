@@ -13,8 +13,8 @@ let package = Package(
   ],
   products: [
     .library(
-      name: "SwiftInjectableMacros",
-      targets: ["SwiftInjectableMacros"]
+      name: "SwiftInjectable",
+      targets: ["SwiftInjectable"]
     ),
   ],
   dependencies: [
@@ -22,7 +22,7 @@ let package = Package(
   ],
   targets: [
     .target(
-      name: "SwiftInjectableMacros",
+      name: "SwiftInjectable",
       dependencies: ["SwiftInjectableMacrosPlugin"]
     ),
     .macro(
@@ -33,9 +33,9 @@ let package = Package(
       ]
     ),
     .testTarget(
-      name: "SwiftInjectableMacrosPluginTests",
+      name: "SwiftInjectableTests",
       dependencies: [
-        "SwiftInjectableMacros",
+        "SwiftInjectable",
         "SwiftInjectableMacrosPlugin",
         .product(name: "SwiftSyntaxMacrosTestSupport", package: "swift-syntax"),
       ]

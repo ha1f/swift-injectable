@@ -1,11 +1,15 @@
 import SwiftUI
 
-struct UserDetailView: View {
+public struct UserDetailView: View {
     var fetchUser = UseFetchUser()
     var logger = UseLogger()
     let userId: Int
 
-    var body: some View {
+    public init(userId: Int) {
+        self.userId = userId
+    }
+
+    public var body: some View {
         VStack(spacing: 16) {
             if fetchUser.isLoading {
                 ProgressView()

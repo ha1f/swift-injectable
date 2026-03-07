@@ -1,12 +1,12 @@
 import SwiftSyntax
 import SwiftSyntaxMacros
 
-/// @Dependencies マクロ。DI container の lazy getter, backing storage, protocol を自動生成する。
-public struct DependenciesMacro {}
+/// @Injectable マクロ。lazy var から registerAll と init を自動生成する。
+public struct InjectableMacro {}
 
-// MARK: - MemberMacro（backing storage + lazy getter + init）
+// MARK: - MemberMacro（registerAll + init 生成）
 
-extension DependenciesMacro: MemberMacro {
+extension InjectableMacro: MemberMacro {
     public static func expansion(
         of node: AttributeSyntax,
         providingMembersOf declaration: some DeclGroupSyntax,
@@ -14,44 +14,39 @@ extension DependenciesMacro: MemberMacro {
         in context: some MacroExpansionContext
     ) throws -> [DeclSyntax] {
         guard declaration.is(ClassDeclSyntax.self) else {
-            throw DiagnosticsError(message: "@Dependencies は class にのみ適用できます")
+            throw DiagnosticsError(message: "@Injectable は class にのみ適用できます")
         }
 
-        let factories = extractFactoryFunctions(from: declaration)
-        guard !factories.isEmpty else {
+        let properties = extractLazyProperties(from: declaration)
+        guard !properties.isEmpty else {
             return []
         }
 
         var members: [DeclSyntax] = []
 
-        // backing storage + lazy getter
-        for f in factories {
-            let storage: DeclSyntax = "private var _\(raw: f.propertyName): (\(raw: f.type))?"
+        // registerAll(in:) — 各 lazy var を型キーで登録
+        let registrations = properties.map {
+            "    store.register(\($0.name), as: (\($0.type)).self)"
+        }.joined(separator: "\n")
 
-            let getter: DeclSyntax = """
-                var \(raw: f.propertyName): \(raw: f.type) {
-                    if let v = _\(raw: f.propertyName) { return v }
-                    let v = \(raw: f.funcName)()
-                    _\(raw: f.propertyName) = v
-                    return v
-                }
-                """
-
-            members.append(storage)
-            members.append(getter)
-        }
+        let registerAllDecl: DeclSyntax = """
+            func registerAll(in store: inout InjectionStore) {
+            \(raw: registrations)
+            }
+            """
+        members.append(registerAllDecl)
 
         // init（全部 optional、テスト用）
-        let params = factories.map {
-            "\($0.propertyName): (\($0.type))? = nil"
+        let params = properties.map {
+            "\($0.name): (\($0.type))? = nil"
         }.joined(separator: ", ")
-        let assignments = factories.map {
-            "self._\($0.propertyName) = \($0.propertyName)"
-        }.joined(separator: "\n    ")
+        let assignments = properties.map {
+            "    if let \($0.name) { self.\($0.name) = \($0.name) }"
+        }.joined(separator: "\n")
 
         let initDecl: DeclSyntax = """
             init(\(raw: params)) {
-                \(raw: assignments)
+            \(raw: assignments)
             }
             """
         members.append(initDecl)
@@ -60,78 +55,61 @@ extension DependenciesMacro: MemberMacro {
     }
 }
 
-// MARK: - PeerMacro（Protocol + conformance 生成）
+// MARK: - ExtensionMacro（InjectableContainer 準拠）
 
-extension DependenciesMacro: PeerMacro {
+extension InjectableMacro: ExtensionMacro {
     public static func expansion(
         of node: AttributeSyntax,
-        providingPeersOf declaration: some DeclSyntaxProtocol,
+        attachedTo declaration: some DeclGroupSyntax,
+        providingExtensionsOf type: some TypeSyntaxProtocol,
+        conformingTo protocols: [TypeSyntax],
         in context: some MacroExpansionContext
-    ) throws -> [DeclSyntax] {
-        guard let classDecl = declaration.as(ClassDeclSyntax.self) else {
+    ) throws -> [ExtensionDeclSyntax] {
+        guard declaration.is(ClassDeclSyntax.self) else {
             return []
         }
-
-        let className = classDecl.name.trimmedDescription
-        let factories = extractFactoryFunctions(from: classDecl)
-        guard !factories.isEmpty else {
-            return []
-        }
-
-        let protocolMembers = factories.map {
-            "    var \($0.propertyName): \($0.type) { get }"
-        }.joined(separator: "\n")
-
-        let protocolDecl: DeclSyntax = """
-            protocol \(raw: className)Protocol {
-            \(raw: protocolMembers)
-            }
+        let ext: DeclSyntax = """
+            extension \(type.trimmed): InjectableContainer {}
             """
-
-        return [protocolDecl]
+        guard let extDecl = ext.as(ExtensionDeclSyntax.self) else {
+            return []
+        }
+        return [extDecl]
     }
 }
 
 // MARK: - ヘルパー
 
-private struct FactoryFunction {
-    let funcName: String
-    let propertyName: String
+private struct LazyProperty {
+    let name: String
     let type: String
 }
 
-/// `create*()` パターンの関数を抽出し、プロパティ名を導出する
-private func extractFactoryFunctions(from declaration: some DeclGroupSyntax) -> [FactoryFunction] {
-    declaration.memberBlock.members.compactMap { member -> FactoryFunction? in
-        guard let funcDecl = member.decl.as(FunctionDeclSyntax.self) else {
+/// `lazy var` プロパティを抽出する
+private func extractLazyProperties(from declaration: some DeclGroupSyntax) -> [LazyProperty] {
+    declaration.memberBlock.members.compactMap { member -> LazyProperty? in
+        guard let varDecl = member.decl.as(VariableDeclSyntax.self) else {
             return nil
         }
 
-        // 引数なし
-        guard funcDecl.signature.parameterClause.parameters.isEmpty else {
+        // lazy 修飾子を持つ
+        let isLazy = varDecl.modifiers.contains { modifier in
+            modifier.name.tokenKind == .keyword(.lazy)
+        }
+        guard isLazy else {
             return nil
         }
 
-        // 戻り値あり
-        guard let returnType = funcDecl.signature.returnClause?.type else {
+        // バインディングから名前と型を取得
+        guard let binding = varDecl.bindings.first,
+              let pattern = binding.pattern.as(IdentifierPatternSyntax.self),
+              let typeAnnotation = binding.typeAnnotation else {
             return nil
         }
 
-        let funcName = funcDecl.name.trimmedDescription
-
-        // create* プレフィックスからプロパティ名を導出
-        guard funcName.hasPrefix("create"),
-              funcName.count > "create".count else {
-            return nil
-        }
-
-        let suffix = String(funcName.dropFirst("create".count))
-        let propertyName = suffix.prefix(1).lowercased() + suffix.dropFirst()
-
-        return FactoryFunction(
-            funcName: funcName,
-            propertyName: propertyName,
-            type: returnType.trimmedDescription
+        return LazyProperty(
+            name: pattern.identifier.trimmedDescription,
+            type: typeAnnotation.type.trimmedDescription
         )
     }
 }

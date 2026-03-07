@@ -1,3 +1,5 @@
+import Presentation
+import SwiftInjectable
 import SwiftUI
 
 @main
@@ -7,7 +9,7 @@ struct BasicExampleApp: App {
             NavigationStack {
                 FeatureView()
             }
-            .inject(AppContainer())
+            .injectAll(AppDependencies())
         }
     }
 }

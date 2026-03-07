@@ -1,10 +1,14 @@
+import Domain
+import SwiftInjectable
 import SwiftUI
-import SwiftInjectableMacros
 
-struct UseLogger: DynamicProperty {
-    @Inject var deps: AppContainer
+@MainActor
+public struct UseLogger: DynamicProperty {
+    @Inject var logger: any LoggerProtocol
 
-    func log(_ message: String) {
-        deps.logger.log(message)
+    public init() {}
+
+    public func log(_ message: String) {
+        logger.log(message)
     }
 }

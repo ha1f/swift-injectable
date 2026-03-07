@@ -1,10 +1,12 @@
 import SwiftUI
 
-struct FeatureView: View {
+public struct FeatureView: View {
     var fetchUser = UseFetchUser()
     var logger = UseLogger()
 
-    var body: some View {
+    public init() {}
+
+    public var body: some View {
         VStack(spacing: 16) {
             if fetchUser.isLoading {
                 ProgressView()

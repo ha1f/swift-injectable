@@ -1,22 +1,26 @@
+import Domain
+import SwiftInjectable
 import SwiftUI
-import SwiftInjectableMacros
 
-struct UseFetchUser: DynamicProperty {
-    @Inject var deps: AppContainer
-    @State var user: User?
-    @State var isLoading = false
-    @State var error: Error?
+@MainActor
+public struct UseFetchUser: DynamicProperty {
+    @Inject var userUseCase: any UserUseCaseProtocol
+    @Inject var logger: any LoggerProtocol
+    @State public var user: User?
+    @State public var isLoading = false
+    @State public var error: Error?
 
-    @MainActor
-    func fetch(userId: Int) async {
+    public init() {}
+
+    public func fetch(userId: Int) async {
         isLoading = true
         defer { isLoading = false }
         do {
-            user = try await deps.userUseCase.execute(userId: userId)
-            deps.logger.log("Fetched user: \(user?.name ?? "")")
+            user = try await userUseCase.fetch(userId: userId)
+            logger.log("Fetched user: \(user?.name ?? "")")
         } catch {
             self.error = error
-            deps.logger.log("Error: \(error)")
+            logger.log("Error: \(error)")
         }
     }
 }

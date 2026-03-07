@@ -13,18 +13,46 @@ let package = Package(
         .package(url: "https://github.com/yysskk/swift-mockable", from: "1.5.0"),
     ],
     targets: [
-        .executableTarget(
-            name: "BasicExample",
+        .target(
+            name: "Domain",
             dependencies: [
-                .product(name: "SwiftInjectableMacros", package: "swift-injectable"),
                 .product(name: "Mockable", package: "swift-mockable"),
             ],
-            path: "Sources"
+            path: "Sources/Domain"
+        ),
+        .target(
+            name: "ConsoleLogger",
+            dependencies: ["Domain"],
+            path: "Sources/ConsoleLogger"
+        ),
+        .target(
+            name: "LiveAPIClient",
+            dependencies: ["Domain"],
+            path: "Sources/LiveAPIClient"
+        ),
+        .target(
+            name: "Presentation",
+            dependencies: [
+                "Domain",
+                .product(name: "SwiftInjectable", package: "swift-injectable"),
+            ],
+            path: "Sources/Presentation"
+        ),
+        .executableTarget(
+            name: "App",
+            dependencies: [
+                "Domain",
+                "ConsoleLogger",
+                "LiveAPIClient",
+                "Presentation",
+                .product(name: "SwiftInjectable", package: "swift-injectable"),
+            ],
+            path: "Sources/App"
         ),
         .testTarget(
-            name: "BasicExampleTests",
+            name: "DomainTests",
             dependencies: [
-                "BasicExample",
+                "Domain",
                 .product(name: "Mockable", package: "swift-mockable"),
             ],
             path: "Tests"

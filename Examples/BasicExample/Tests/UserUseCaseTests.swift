@@ -1,6 +1,6 @@
 import Foundation
 import Testing
-@testable import BasicExample
+@testable import Domain
 
 @Suite("UserUseCase テスト")
 struct UserUseCaseTests {
@@ -13,7 +13,7 @@ struct UserUseCaseTests {
         }
 
         let useCase = UserUseCase(apiClient: mockClient)
-        let user = try await useCase.execute(userId: 42)
+        let user = try await useCase.fetch(userId: 42)
 
         #expect(user.id == 42)
         #expect(user.name == "Test User 42")
@@ -30,7 +30,7 @@ struct UserUseCaseTests {
         let useCase = UserUseCase(apiClient: mockClient)
 
         do {
-            _ = try await useCase.execute(userId: 1)
+            _ = try await useCase.fetch(userId: 1)
             Issue.record("エラーが発生するはず")
         } catch {
             #expect(error is URLError)
