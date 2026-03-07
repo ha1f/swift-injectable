@@ -2,7 +2,7 @@ import SwiftUI
 import SwiftInjectableMacros
 
 struct UseFetchUser: DynamicProperty {
-    @Deps var deps: AppDependencies
+    @Deps var deps: AppContainer
     @State var user: User?
     @State var isLoading = false
     @State var error: Error?

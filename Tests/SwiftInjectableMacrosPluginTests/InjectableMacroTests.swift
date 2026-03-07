@@ -12,74 +12,88 @@ final class DependenciesMacroTests: XCTestCase {
         assertMacroExpansion(
             """
             @Dependencies
-            struct AppDependencies {
-                var logger: any LoggerProtocol { _logger ?? ConsoleLogger() }
-                var userUseCase: any UserUseCaseProtocol { _userUseCase ?? UserUseCase() }
+            class AppContainer {
+                func createLogger() -> any LoggerProtocol { ConsoleLogger() }
+                func createUserUseCase() -> any UserUseCaseProtocol { UserUseCase() }
             }
             """,
             expandedSource: """
-            struct AppDependencies {
-                var logger: any LoggerProtocol { _logger ?? ConsoleLogger() }
-                var userUseCase: any UserUseCaseProtocol { _userUseCase ?? UserUseCase() }
+            class AppContainer {
+                func createLogger() -> any LoggerProtocol { ConsoleLogger() }
+                func createUserUseCase() -> any UserUseCaseProtocol { UserUseCase() }
 
-                var _logger: (any LoggerProtocol)?
+                private var _logger: (any LoggerProtocol)?
 
-                var _userUseCase: (any UserUseCaseProtocol)?
+                var logger: any LoggerProtocol {
+                    if let v = _logger {
+                        return v
+                    }
+                    let v = createLogger()
+                    _logger = v
+                    return v
+                }
 
-                init(_ logger: (any LoggerProtocol)? = nil, _ userUseCase: (any UserUseCaseProtocol)? = nil) {
+                private var _userUseCase: (any UserUseCaseProtocol)?
+
+                var userUseCase: any UserUseCaseProtocol {
+                    if let v = _userUseCase {
+                        return v
+                    }
+                    let v = createUserUseCase()
+                    _userUseCase = v
+                    return v
+                }
+
+                init(logger: (any LoggerProtocol)? = nil, userUseCase: (any UserUseCaseProtocol)? = nil) {
                     self._logger = logger
                     self._userUseCase = userUseCase
                 }
+            }
 
-                func body(content: Content) -> some View {
-                    content
-                        .transformEnvironment(\\.dependenciesStore) { store in
-                            store.register(self)
-                        }
+            protocol AppContainerProtocol {
+                var logger: any LoggerProtocol {
+                    get
+                }
+                var userUseCase: any UserUseCaseProtocol {
+                    get
                 }
             }
+            """,
+            macros: testMacros
+        )
+    }
 
-            extension AppDependencies: ViewModifier {
+    func testEmptyClass() {
+        assertMacroExpansion(
+            """
+            @Dependencies
+            class EmptyContainer {
+            }
+            """,
+            expandedSource: """
+            class EmptyContainer {
             }
             """,
             macros: testMacros
         )
     }
 
-    func testEmptyStruct() {
+    func testStructProducesError() {
         assertMacroExpansion(
             """
             @Dependencies
-            struct EmptyDeps {
+            struct BadContainer {
+                func createLogger() -> any LoggerProtocol { ConsoleLogger() }
             }
             """,
             expandedSource: """
-            struct EmptyDeps {
-            }
-
-            extension EmptyDeps: ViewModifier {
-            }
-            """,
-            macros: testMacros
-        )
-    }
-
-    func testClassProducesError() {
-        assertMacroExpansion(
-            """
-            @Dependencies
-            class BadDeps {
-                var logger: any LoggerProtocol { ConsoleLogger() }
-            }
-            """,
-            expandedSource: """
-            class BadDeps {
-                var logger: any LoggerProtocol { ConsoleLogger() }
+            struct BadContainer {
+                func createLogger() -> any LoggerProtocol { ConsoleLogger() }
             }
             """,
             diagnostics: [
                 DiagnosticSpec(
-                    message: "@Dependencies は struct にのみ適用できます",
+                    message: "@Dependencies は class にのみ適用できます",
                     line: 1,
                     column: 1
                 ),

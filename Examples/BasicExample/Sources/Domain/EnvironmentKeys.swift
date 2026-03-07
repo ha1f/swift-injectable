@@ -1,8 +1,8 @@
 import SwiftInjectableMacros
 
 @Dependencies
-struct AppDependencies {
-    var apiClient: any APIClientProtocol { _apiClient ?? LiveAPIClient() }
-    var logger: any LoggerProtocol { _logger ?? ConsoleLogger() }
-    var userUseCase: any UserUseCaseProtocol { _userUseCase ?? UserUseCase(apiClient: apiClient) }
+class AppContainer {
+    func createApiClient() -> any APIClientProtocol { LiveAPIClient() }
+    func createLogger() -> any LoggerProtocol { ConsoleLogger() }
+    func createUserUseCase() -> any UserUseCaseProtocol { UserUseCase(apiClient: apiClient) }
 }

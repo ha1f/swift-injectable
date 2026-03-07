@@ -2,7 +2,7 @@ import SwiftUI
 import SwiftInjectableMacros
 
 struct UseLogger: DynamicProperty {
-    @Deps var deps: AppDependencies
+    @Deps var deps: AppContainer
 
     func log(_ message: String) {
         deps.logger.log(message)

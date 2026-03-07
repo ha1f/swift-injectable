@@ -2,9 +2,9 @@
 
 // MARK: - マクロ宣言
 
-/// ViewModifier 準拠（body）を自動生成する。
-@attached(member, names: named(body), named(init), arbitrary)
-@attached(extension, conformances: ViewModifier)
+/// DI container の lazy getter, backing storage, protocol を自動生成する。
+@attached(member, names: named(init), arbitrary)
+@attached(peer, names: suffixed(Protocol))
 public macro Dependencies() = #externalMacro(
     module: "SwiftInjectableMacrosPlugin",
     type: "DependenciesMacro"
@@ -58,8 +58,10 @@ public struct Deps<D>: DynamicProperty {
 // MARK: - View extension
 
 extension View {
-    /// @Dependencies struct を使って依存を一括注入する。
-    public func inject(_ modifier: some ViewModifier) -> some View {
-        self.modifier(modifier)
+    /// @Dependencies container を環境に注入する。
+    public func inject<D>(_ container: D) -> some View {
+        self.transformEnvironment(\.dependenciesStore) { store in
+            store.register(container)
+        }
     }
 }
