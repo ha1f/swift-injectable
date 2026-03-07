@@ -350,7 +350,6 @@ See [`Examples/BasicExample`](Examples/BasicExample) for a complete multi-module
 
 ### Planned Improvements
 
-- **Generic struct support for `@Hook`** — `@Hook struct Foo<T>` does not propagate generic parameters to the generated `Storage` class, causing compile errors. Workaround: avoid generic type parameters in stored vars.
 - **Richer lifecycle hooks** — `DynamicProperty.update()` is available but limited (no dependency tracking, no cleanup, not called in tests). A `useEffect`-like API with change detection would be more powerful.
 
 ### Design Constraints
