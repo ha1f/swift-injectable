@@ -38,11 +38,11 @@ extension EnvironmentValues {
     }
 }
 
-// MARK: - @Deps property wrapper
+// MARK: - @Inject property wrapper
 
-/// @Dependencies struct から依存を取得する property wrapper
+/// @Dependencies container から依存を取得する property wrapper
 @propertyWrapper
-public struct Deps<D>: DynamicProperty {
+public struct Inject<D>: DynamicProperty {
     @Environment(\.dependenciesStore) private var store
 
     public var wrappedValue: D {
