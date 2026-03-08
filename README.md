@@ -387,7 +387,10 @@ func counterIncrements() {
 
 ## Example App
 
-See [`Examples/BasicExample`](Examples/BasicExample) for a complete multi-module app demonstrating `@Provider`, `@Hook`, `@Injected`, and `withTestInjection` working together.
+| Example | Description |
+|---|---|
+| [`Examples/BasicExample`](Examples/BasicExample) | Simple multi-module app — counter hooks, user fetch with DI |
+| [`Examples/TodoApp`](Examples/TodoApp) | Complex app — CRUD, filtering, hook composition, optimistic updates, form validation |
 
 ---
 
