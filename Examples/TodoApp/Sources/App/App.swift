@@ -18,8 +18,7 @@ struct TodoApp: App {
 
 /// ルート画面: TodoListViewにツールバー（追加・統計）を追加
 struct RootView: View {
-    var todoList = UseTodoList()
-    @State private var showingForm = false
+    var hook = UseTodoListView()
 
     var body: some View {
         TodoListView()
@@ -27,7 +26,7 @@ struct RootView: View {
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
                     Button {
-                        showingForm = true
+                        hook.showForm()
                     } label: {
                         Image(systemName: "plus")
                     }
@@ -40,13 +39,10 @@ struct RootView: View {
                     }
                 }
             }
-            .sheet(isPresented: $showingForm) {
+            .sheet(isPresented: hook.binding.isFormPresented) {
                 NavigationStack {
                     TodoFormView { title in
-                        showingForm = false
-                        Task {
-                            await todoList.add(title: title)
-                        }
+                        hook.submitForm(title: title)
                     }
                 }
             }

@@ -4,15 +4,13 @@ import SwiftUI
 
 /// Todoリスト画面
 public struct TodoListView: View {
-    var todoList = UseTodoList()
-    var filter = UseTodoFilter()
+    var hook = UseTodoListView()
 
     public init() {}
 
     public var body: some View {
         VStack {
-            // フィルターセグメント
-            Picker("フィルター", selection: filter.binding.currentFilter) {
+            Picker("フィルター", selection: hook.filter.binding.currentFilter) {
                 Text("すべて").tag(TodoFilter.all)
                 Text("未完了").tag(TodoFilter.active)
                 Text("完了").tag(TodoFilter.completed)
@@ -20,38 +18,29 @@ public struct TodoListView: View {
             .pickerStyle(.segmented)
             .padding(.horizontal)
 
-            if todoList.isLoading {
+            if hook.todoList.isLoading {
                 ProgressView()
                     .frame(maxHeight: .infinity)
+            } else if hook.filteredTodos.isEmpty {
+                ContentUnavailableView(
+                    "Todoがありません",
+                    systemImage: "checklist"
+                )
             } else {
-                let filteredTodos = filter.apply(to: todoList.todos)
-                if filteredTodos.isEmpty {
-                    ContentUnavailableView(
-                        "Todoがありません",
-                        systemImage: "checklist"
-                    )
-                } else {
-                    List {
-                        ForEach(filteredTodos) { todo in
-                            NavigationLink {
-                                TodoDetailView(todo: todo)
-                            } label: {
-                                TodoRowView(todo: todo) {
-                                    Task {
-                                        await todoList.toggleCompletion(todo)
-                                    }
-                                }
-                            }
-                        }
-                        .onDelete { indexSet in
-                            let filtered = filter.apply(to: todoList.todos)
-                            for index in indexSet {
-                                let todo = filtered[index]
+                List {
+                    ForEach(hook.filteredTodos) { todo in
+                        NavigationLink {
+                            TodoDetailView(todo: todo)
+                        } label: {
+                            TodoRowView(todo: todo) {
                                 Task {
-                                    await todoList.delete(id: todo.id)
+                                    await hook.todoList.toggleCompletion(todo)
                                 }
                             }
                         }
+                    }
+                    .onDelete { indexSet in
+                        hook.deleteAtOffsets(indexSet)
                     }
                 }
             }
@@ -59,21 +48,21 @@ public struct TodoListView: View {
         .alert(
             "エラー",
             isPresented: Binding(
-                get: { todoList.error != nil },
-                set: { if !$0 { todoList.clearError() } }
+                get: { hook.hasError },
+                set: { if !$0 { hook.dismissError() } }
             )
         ) {
             Button("リトライ") {
-                Task { await todoList.fetchAll() }
+                Task { await hook.retry() }
             }
             Button("OK", role: .cancel) {
-                todoList.clearError()
+                hook.dismissError()
             }
         } message: {
-            Text(todoList.error?.localizedDescription ?? "")
+            Text(hook.errorMessage)
         }
         .task {
-            await todoList.fetchAll()
+            await hook.retry()
         }
     }
 }

@@ -353,7 +353,7 @@ final class HookMacroTests: XCTestCase {
 
                 @Observable
                 public final class Storage {
-                    var count: Int
+                    public var count: Int
                     init(
                         count: Int
                     ) {

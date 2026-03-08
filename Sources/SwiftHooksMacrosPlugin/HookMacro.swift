@@ -40,7 +40,7 @@ extension HookMacro: MemberMacro {
 
         // Storage クラス
         let storageProperties = storedVars.map {
-            "    var \($0.name): \($0.type)"
+            "    \(accessLevel)var \($0.name): \($0.type)"
         }.joined(separator: "\n")
 
         let initParams = storedVars.map {
