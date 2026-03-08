@@ -1,7 +1,7 @@
 @testable import Domain
 import Foundation
-import Presentation
 import SwiftInjectable
+import TodoStatsFeature
 import Testing
 
 @Suite("UseTodoStats テスト")

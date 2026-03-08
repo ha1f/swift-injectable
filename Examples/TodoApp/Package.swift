@@ -31,13 +31,39 @@ let package = Package(
             path: "Sources/Infrastructure"
         ),
         .target(
-            name: "Presentation",
+            name: "TodoListFeature",
             dependencies: [
                 "Domain",
+                "TodoDetailFeature",
                 .product(name: "SwiftInjectable", package: "swift-injectable"),
                 .product(name: "SwiftHooks", package: "swift-injectable"),
             ],
-            path: "Sources/Presentation"
+            path: "Sources/TodoListFeature"
+        ),
+        .target(
+            name: "TodoDetailFeature",
+            dependencies: [
+                "Domain",
+            ],
+            path: "Sources/TodoDetailFeature"
+        ),
+        .target(
+            name: "TodoFormFeature",
+            dependencies: [
+                "Domain",
+                .product(name: "SwiftHooks", package: "swift-injectable"),
+            ],
+            path: "Sources/TodoFormFeature"
+        ),
+        .target(
+            name: "TodoStatsFeature",
+            dependencies: [
+                "Domain",
+                "TodoListFeature",
+                .product(name: "SwiftInjectable", package: "swift-injectable"),
+                .product(name: "SwiftHooks", package: "swift-injectable"),
+            ],
+            path: "Sources/TodoStatsFeature"
         ),
         .executableTarget(
             name: "App",
@@ -45,7 +71,9 @@ let package = Package(
                 "Domain",
                 "Data",
                 "Infrastructure",
-                "Presentation",
+                "TodoListFeature",
+                "TodoFormFeature",
+                "TodoStatsFeature",
                 .product(name: "SwiftInjectable", package: "swift-injectable"),
             ],
             path: "Sources/App"
@@ -68,14 +96,31 @@ let package = Package(
             path: "Tests/DataTests"
         ),
         .testTarget(
-            name: "PresentationTests",
+            name: "TodoListFeatureTests",
             dependencies: [
                 "Domain",
-                "Presentation",
+                "TodoListFeature",
                 .product(name: "SwiftInjectable", package: "swift-injectable"),
                 .product(name: "Mockable", package: "swift-mockable"),
             ],
-            path: "Tests/PresentationTests"
+            path: "Tests/TodoListFeatureTests"
+        ),
+        .testTarget(
+            name: "TodoFormFeatureTests",
+            dependencies: [
+                "TodoFormFeature",
+            ],
+            path: "Tests/TodoFormFeatureTests"
+        ),
+        .testTarget(
+            name: "TodoStatsFeatureTests",
+            dependencies: [
+                "Domain",
+                "TodoStatsFeature",
+                .product(name: "SwiftInjectable", package: "swift-injectable"),
+                .product(name: "Mockable", package: "swift-mockable"),
+            ],
+            path: "Tests/TodoStatsFeatureTests"
         ),
     ],
     swiftLanguageModes: [.v6]

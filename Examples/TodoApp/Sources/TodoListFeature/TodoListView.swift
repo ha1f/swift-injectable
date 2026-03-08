@@ -1,11 +1,11 @@
 import Domain
+import TodoDetailFeature
 import SwiftUI
 
 /// Todoリスト画面
 public struct TodoListView: View {
     var todoList = UseTodoList()
     var filter = UseTodoFilter()
-    @State private var showingForm = false
 
     public init() {}
 
@@ -56,33 +56,6 @@ public struct TodoListView: View {
                             }
                         }
                     }
-                }
-            }
-        }
-        .navigationTitle("Todo")
-        .toolbar {
-            ToolbarItem(placement: .primaryAction) {
-                Button {
-                    showingForm = true
-                } label: {
-                    Image(systemName: "plus")
-                }
-            }
-            ToolbarItem(placement: .automatic) {
-                NavigationLink {
-                    TodoStatsView()
-                } label: {
-                    Image(systemName: "chart.bar")
-                }
-            }
-        }
-        .sheet(isPresented: $showingForm) {
-            NavigationStack {
-                TodoFormView { title in
-                    Task {
-                        await todoList.add(title: title)
-                    }
-                    showingForm = false
                 }
             }
         }
