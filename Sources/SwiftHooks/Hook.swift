@@ -14,7 +14,7 @@ import SwiftUI
 ///     func increment() { count += 1 }
 /// }
 /// ```
-@attached(member, names: named(Storage), named(hookStorage), named(init), arbitrary)
+@attached(member, names: named(Storage), named(hookStorage), named(binding), named(init), arbitrary)
 @attached(memberAttribute)
 @attached(extension, conformances: DynamicProperty)
 public macro Hook() = #externalMacro(

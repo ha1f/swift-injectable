@@ -25,6 +25,19 @@ extension HookMacro: MemberMacro {
             return []
         }
 
+        // access control
+        let accessLevel: String
+        if let structDecl = declaration.as(StructDeclSyntax.self) {
+            let modifiers = structDecl.modifiers.map { $0.trimmedDescription }
+            if modifiers.contains("public") {
+                accessLevel = "public "
+            } else {
+                accessLevel = ""
+            }
+        } else {
+            accessLevel = ""
+        }
+
         // Storage クラス
         let storageProperties = storedVars.map {
             "    var \($0.name): \($0.type)"
@@ -40,7 +53,7 @@ extension HookMacro: MemberMacro {
 
         let storageDecl: DeclSyntax = """
             @Observable
-            final class Storage {
+            \(raw: accessLevel)final class Storage {
             \(raw: storageProperties)
                 init(
             \(raw: initParams)
@@ -55,18 +68,12 @@ extension HookMacro: MemberMacro {
             @SwiftUI.State private var hookStorage: Storage
             """
 
-        // access control
-        let accessLevel: String
-        if let structDecl = declaration.as(StructDeclSyntax.self) {
-            let modifiers = structDecl.modifiers.map { $0.trimmedDescription }
-            if modifiers.contains("public") {
-                accessLevel = "public "
-            } else {
-                accessLevel = ""
+        // binding プロパティ（Binding<Storage> を返す）
+        let bindingProperty: DeclSyntax = """
+            \(raw: accessLevel)var binding: SwiftUI.Binding<Storage> {
+                $hookStorage
             }
-        } else {
-            accessLevel = ""
-        }
+            """
 
         // init
         let hookInitParams = storedVars.map { sv in
@@ -97,7 +104,7 @@ extension HookMacro: MemberMacro {
             }
             """
 
-        return [storageDecl, storageProperty, hookInit]
+        return [storageDecl, storageProperty, bindingProperty, hookInit]
     }
 }
 

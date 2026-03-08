@@ -12,10 +12,7 @@ public struct TodoListView: View {
     public var body: some View {
         VStack {
             // フィルターセグメント
-            Picker("フィルター", selection: Binding(
-                get: { filter.currentFilter },
-                set: { filter.currentFilter = $0 }
-            )) {
+            Picker("フィルター", selection: filter.binding.currentFilter) {
                 Text("すべて").tag(TodoFilter.all)
                 Text("未完了").tag(TodoFilter.active)
                 Text("完了").tag(TodoFilter.completed)

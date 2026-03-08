@@ -50,6 +50,10 @@ final class HookMacroTests: XCTestCase {
 
                 @SwiftUI.State private var hookStorage: Storage
 
+                var binding: SwiftUI.Binding<Storage> {
+                    $hookStorage
+                }
+
                 init(
                         count: Int = 0
                 ) {
@@ -148,6 +152,10 @@ final class HookMacroTests: XCTestCase {
 
                 @SwiftUI.State private var hookStorage: Storage
 
+                var binding: SwiftUI.Binding<Storage> {
+                    $hookStorage
+                }
+
                 init(
                         user: User? = nil,
                         isLoading: Bool = false
@@ -208,6 +216,10 @@ final class HookMacroTests: XCTestCase {
                 }
 
                 @SwiftUI.State private var hookStorage: Storage
+
+                var binding: SwiftUI.Binding<Storage> {
+                    $hookStorage
+                }
 
                 init(
                         isLoading: Bool = false
@@ -291,6 +303,10 @@ final class HookMacroTests: XCTestCase {
 
                 @SwiftUI.State private var hookStorage: Storage
 
+                var binding: SwiftUI.Binding<Storage> {
+                    $hookStorage
+                }
+
                 init(
                         value: String
                 ) {
@@ -336,7 +352,7 @@ final class HookMacroTests: XCTestCase {
                 private var _hook_backing_count: Int
 
                 @Observable
-                final class Storage {
+                public final class Storage {
                     var count: Int
                     init(
                         count: Int
@@ -346,6 +362,10 @@ final class HookMacroTests: XCTestCase {
                 }
 
                 @SwiftUI.State private var hookStorage: Storage
+
+                public var binding: SwiftUI.Binding<Storage> {
+                    $hookStorage
+                }
 
                 public init(
                         count: Int = 0
@@ -402,6 +422,10 @@ final class HookMacroTests: XCTestCase {
                 }
 
                 @SwiftUI.State private var hookStorage: Storage
+
+                var binding: SwiftUI.Binding<Storage> {
+                    $hookStorage
+                }
 
                 init(
                         value: T

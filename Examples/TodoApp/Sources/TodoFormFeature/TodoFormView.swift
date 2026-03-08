@@ -12,10 +12,7 @@ public struct TodoFormView: View {
     public var body: some View {
         Form {
             Section {
-                TextField("タイトル", text: Binding(
-                    get: { form.title },
-                    set: { form.title = $0 }
-                ))
+                TextField("タイトル", text: form.binding.title)
             } footer: {
                 if let error = form.validationError {
                     Text(error)
