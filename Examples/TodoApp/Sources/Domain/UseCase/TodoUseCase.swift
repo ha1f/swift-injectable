@@ -1,6 +1,7 @@
 import Foundation
 
 /// TodoUseCaseProtocolの実装
+@MainActor
 public struct TodoUseCase: TodoUseCaseProtocol {
     private let repository: any TodoRepositoryProtocol
     private let logger: any LoggerProtocol
@@ -10,24 +11,26 @@ public struct TodoUseCase: TodoUseCaseProtocol {
         self.logger = logger
     }
 
-    public func fetchAll() async throws -> [Todo] {
-        logger.log("Todo一覧を取得")
-        return try await repository.fetchAll()
+    public var todos: [Todo] {
+        repository.todos
     }
 
-    public func add(title: String) async throws -> Todo {
+    public func fetchAll() async throws {
+        logger.log("Todo一覧を取得")
+        try await repository.fetchAll()
+    }
+
+    public func add(title: String) async throws {
         let todo = Todo(title: title)
         try await repository.add(todo)
         logger.log("Todoを追加: \(title)")
-        return todo
     }
 
-    public func toggleCompletion(_ todo: Todo) async throws -> Todo {
+    public func toggleCompletion(_ todo: Todo) async throws {
         var updated = todo
         updated.isCompleted.toggle()
         try await repository.update(updated)
         logger.log("Todoの完了状態を変更: \(todo.title) → \(updated.isCompleted)")
-        return updated
     }
 
     public func delete(id: UUID) async throws {

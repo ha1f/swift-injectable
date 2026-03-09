@@ -4,35 +4,33 @@ import Foundation
 import Testing
 
 @Suite("InMemoryTodoRepository テスト")
+@MainActor
 struct InMemoryTodoRepositoryTests {
 
     @Test("初期状態: 空のリストを返す")
     func fetchAllEmpty() async throws {
         let repo = InMemoryTodoRepository()
-        let todos = try await repo.fetchAll()
-        #expect(todos.isEmpty)
+        #expect(repo.todos.isEmpty)
     }
 
     @Test("初期値付き: 指定したTodoが含まれる")
     func fetchAllWithInitial() async throws {
         let initial = [Todo(title: "初期Todo")]
         let repo = InMemoryTodoRepository(initialTodos: initial)
-        let todos = try await repo.fetchAll()
 
-        #expect(todos.count == 1)
-        #expect(todos[0].title == "初期Todo")
+        #expect(repo.todos.count == 1)
+        #expect(repo.todos[0].title == "初期Todo")
     }
 
-    @Test("add: Todoを追加してfetchAllで取得できる")
+    @Test("add: Todoを追加するとtodosに反映される")
     func addAndFetch() async throws {
         let repo = InMemoryTodoRepository()
         let todo = Todo(title: "追加されたTodo")
 
         try await repo.add(todo)
-        let todos = try await repo.fetchAll()
 
-        #expect(todos.count == 1)
-        #expect(todos[0] == todo)
+        #expect(repo.todos.count == 1)
+        #expect(repo.todos[0] == todo)
     }
 
     @Test("update: 既存のTodoを更新する")
@@ -45,9 +43,8 @@ struct InMemoryTodoRepositoryTests {
         updated.isCompleted = true
         try await repo.update(updated)
 
-        let todos = try await repo.fetchAll()
-        #expect(todos[0].title == "更新されたタイトル")
-        #expect(todos[0].isCompleted == true)
+        #expect(repo.todos[0].title == "更新されたタイトル")
+        #expect(repo.todos[0].isCompleted == true)
     }
 
     @Test("update: 存在しないIDでエラーになる")
@@ -69,8 +66,7 @@ struct InMemoryTodoRepositoryTests {
         let repo = InMemoryTodoRepository(initialTodos: [todo])
 
         try await repo.delete(id: todo.id)
-        let todos = try await repo.fetchAll()
-        #expect(todos.isEmpty)
+        #expect(repo.todos.isEmpty)
     }
 
     @Test("delete: 存在しないIDでエラーになる")
@@ -96,11 +92,9 @@ struct InMemoryTodoRepositoryTests {
         try await repo.add(todo2)
         try await repo.add(todo3)
 
-        // 1つ削除
         try await repo.delete(id: todo2.id)
 
-        let todos = try await repo.fetchAll()
-        #expect(todos.count == 2)
-        #expect(todos.map(\.title) == ["Todo1", "Todo3"])
+        #expect(repo.todos.count == 2)
+        #expect(repo.todos.map(\.title) == ["Todo1", "Todo3"])
     }
 }

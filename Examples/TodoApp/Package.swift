@@ -35,6 +35,7 @@ let package = Package(
             dependencies: [
                 "Domain",
                 "TodoDetailFeature",
+                "TodoFormFeature",
                 .product(name: "SwiftInjectable", package: "swift-injectable"),
                 .product(name: "SwiftHooks", package: "swift-injectable"),
             ],
@@ -72,7 +73,6 @@ let package = Package(
                 "Data",
                 "Infrastructure",
                 "TodoListFeature",
-                "TodoFormFeature",
                 "TodoStatsFeature",
                 .product(name: "SwiftInjectable", package: "swift-injectable"),
             ],

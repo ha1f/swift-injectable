@@ -1,16 +1,20 @@
 import Domain
 import Foundation
+import Observation
 
 /// インメモリのTodoリポジトリ実装
-public final actor InMemoryTodoRepository: TodoRepositoryProtocol {
-    private var todos: [Todo]
+/// @Observable により、todos の変更が SwiftUI に自動伝播する
+@Observable
+@MainActor
+public final class InMemoryTodoRepository: TodoRepositoryProtocol {
+    public private(set) var todos: [Todo]
 
     public init(initialTodos: [Todo] = []) {
         self.todos = initialTodos
     }
 
-    public func fetchAll() async throws -> [Todo] {
-        todos
+    public func fetchAll() async throws {
+        // InMemory なので何もしない（todos は常に最新）
     }
 
     public func add(_ todo: Todo) async throws {

@@ -4,40 +4,39 @@ import SwiftInjectable
 import SwiftUI
 
 /// Todoリストの状態管理を提供するhook
+/// todosはUseCase（Repository）から直接参照するため、
+/// 他のhookからのadd/deleteも自動的に反映される
 @Hook
 @MainActor
 public struct UseTodoList {
     @Injected var todoUseCase: any TodoUseCaseProtocol
 
-    public var todos: [Todo] = []
     public var isLoading: Bool = false
     public var error: (any Error)? = nil
+
+    /// Repository が保持する最新のTodoリスト
+    public var todos: [Todo] {
+        todoUseCase.todos
+    }
 
     /// Todo一覧を取得する
     public func fetchAll() async {
         isLoading = true
         defer { isLoading = false }
         do {
-            todos = try await todoUseCase.fetchAll()
+            try await todoUseCase.fetchAll()
             error = nil
         } catch {
             self.error = error
         }
     }
 
-    /// Todoの完了状態をトグルする（楽観的更新）
+    /// Todoの完了状態をトグルする
     public func toggleCompletion(_ todo: Todo) async {
-        // 楽観的更新: 先にローカル状態を変更
-        if let index = todos.firstIndex(where: { $0.id == todo.id }) {
-            todos[index].isCompleted.toggle()
-        }
         do {
-            _ = try await todoUseCase.toggleCompletion(todo)
+            try await todoUseCase.toggleCompletion(todo)
+            error = nil
         } catch {
-            // 失敗時はロールバック
-            if let index = todos.firstIndex(where: { $0.id == todo.id }) {
-                todos[index].isCompleted.toggle()
-            }
             self.error = error
         }
     }
@@ -46,18 +45,16 @@ public struct UseTodoList {
     public func delete(id: UUID) async {
         do {
             try await todoUseCase.delete(id: id)
-            todos.removeAll { $0.id == id }
             error = nil
         } catch {
             self.error = error
         }
     }
 
-    /// Todoを追加し、リストに反映する
+    /// Todoを追加する
     public func add(title: String) async {
         do {
-            let todo = try await todoUseCase.add(title: title)
-            todos.append(todo)
+            try await todoUseCase.add(title: title)
             error = nil
         } catch {
             self.error = error
