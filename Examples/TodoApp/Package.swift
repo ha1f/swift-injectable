@@ -17,6 +17,8 @@ let package = Package(
             name: "Domain",
             dependencies: [
                 .product(name: "Mockable", package: "swift-mockable"),
+                .product(name: "SwiftInjectable", package: "swift-injectable"),
+                .product(name: "SwiftHooks", package: "swift-injectable"),
             ],
             path: "Sources/Domain"
         ),
@@ -77,14 +79,6 @@ let package = Package(
                 .product(name: "SwiftInjectable", package: "swift-injectable"),
             ],
             path: "Sources/App"
-        ),
-        .testTarget(
-            name: "DomainTests",
-            dependencies: [
-                "Domain",
-                .product(name: "Mockable", package: "swift-mockable"),
-            ],
-            path: "Tests/DomainTests"
         ),
         .testTarget(
             name: "DataTests",

@@ -8,6 +8,26 @@ import TodoListFeature
 @MainActor
 struct UseTodoListViewTests {
 
+    private func withMocks(
+        todos: [Todo] = [],
+        configure: ((TodoRepositoryProtocolMock, LoggerProtocolMock) -> Void)? = nil,
+        body: (UseTodoListView, TodoRepositoryProtocolMock) async throws -> Void
+    ) async rethrows {
+        let mockRepo = TodoRepositoryProtocolMock()
+        mockRepo._todos = todos
+        let mockLogger = LoggerProtocolMock()
+        mockLogger.logHandler = { _ in }
+        configure?(mockRepo, mockLogger)
+
+        try await withTestInjection(configure: { store in
+            store.register(mockRepo, for: (any TodoRepositoryProtocol).self)
+            store.register(mockLogger, for: (any LoggerProtocol).self)
+        }) {
+            let hook = UseTodoListView()
+            try await body(hook, mockRepo)
+        }
+    }
+
     // MARK: - filteredTodos
 
     @Test("filteredTodos: allフィルターですべてのTodoを返す")
@@ -16,14 +36,7 @@ struct UseTodoListViewTests {
             Todo(title: "Todo1", isCompleted: false),
             Todo(title: "Todo2", isCompleted: true),
         ]
-        let mockUseCase = TodoUseCaseProtocolMock()
-        mockUseCase._todos = todos
-
-        await withTestInjection(configure: { store in
-            store.register(mockUseCase, for: (any TodoUseCaseProtocol).self)
-        }) {
-            let hook = UseTodoListView()
-
+        await withMocks(todos: todos) { hook, _ in
             #expect(hook.filteredTodos.count == 2)
         }
     }
@@ -35,13 +48,7 @@ struct UseTodoListViewTests {
             Todo(title: "Todo2", isCompleted: true),
             Todo(title: "Todo3", isCompleted: false),
         ]
-        let mockUseCase = TodoUseCaseProtocolMock()
-        mockUseCase._todos = todos
-
-        await withTestInjection(configure: { store in
-            store.register(mockUseCase, for: (any TodoUseCaseProtocol).self)
-        }) {
-            let hook = UseTodoListView()
+        await withMocks(todos: todos) { hook, _ in
             hook.filter.currentFilter = .active
 
             #expect(hook.filteredTodos.count == 2)
@@ -58,14 +65,9 @@ struct UseTodoListViewTests {
             Todo(title: "完了1", isCompleted: true),
             Todo(title: "未完了2", isCompleted: false),
         ]
-        let mockUseCase = TodoUseCaseProtocolMock()
-        mockUseCase._todos = todos
-        mockUseCase.deleteHandler = { _ in }
-
-        await withTestInjection(configure: { store in
-            store.register(mockUseCase, for: (any TodoUseCaseProtocol).self)
-        }) {
-            let hook = UseTodoListView()
+        await withMocks(todos: todos, configure: { repo, _ in
+            repo.deleteHandler = { _ in }
+        }) { hook, repo in
             hook.filter.currentFilter = .active
 
             #expect(hook.filteredTodos.count == 2)
@@ -73,7 +75,7 @@ struct UseTodoListViewTests {
             hook.deleteAtOffsets(IndexSet(integer: 0))
 
             try? await Task.sleep(for: .milliseconds(10))
-            #expect(mockUseCase.deleteCallCount == 1)
+            #expect(repo.deleteCallCount == 1)
         }
     }
 
@@ -81,14 +83,9 @@ struct UseTodoListViewTests {
 
     @Test("hasError: エラーがない場合はfalse")
     func hasErrorFalse() async {
-        let mockUseCase = TodoUseCaseProtocolMock()
-        mockUseCase._todos = []
-        mockUseCase.fetchAllHandler = { }
-
-        await withTestInjection(configure: { store in
-            store.register(mockUseCase, for: (any TodoUseCaseProtocol).self)
-        }) {
-            let hook = UseTodoListView()
+        await withMocks(configure: { repo, _ in
+            repo.fetchAllHandler = { }
+        }) { hook, _ in
             await hook.todoList.fetchAll()
 
             #expect(hook.hasError == false)
@@ -98,16 +95,11 @@ struct UseTodoListViewTests {
 
     @Test("hasError: エラーがある場合はtrue")
     func hasErrorTrue() async {
-        let mockUseCase = TodoUseCaseProtocolMock()
-        mockUseCase._todos = []
-        mockUseCase.fetchAllHandler = {
-            throw URLError(.notConnectedToInternet)
-        }
-
-        await withTestInjection(configure: { store in
-            store.register(mockUseCase, for: (any TodoUseCaseProtocol).self)
-        }) {
-            let hook = UseTodoListView()
+        await withMocks(configure: { repo, _ in
+            repo.fetchAllHandler = {
+                throw URLError(.notConnectedToInternet)
+            }
+        }) { hook, _ in
             await hook.todoList.fetchAll()
 
             #expect(hook.hasError == true)
@@ -119,16 +111,11 @@ struct UseTodoListViewTests {
 
     @Test("dismissError: エラーがクリアされる")
     func dismissError() async {
-        let mockUseCase = TodoUseCaseProtocolMock()
-        mockUseCase._todos = []
-        mockUseCase.fetchAllHandler = {
-            throw URLError(.badURL)
-        }
-
-        await withTestInjection(configure: { store in
-            store.register(mockUseCase, for: (any TodoUseCaseProtocol).self)
-        }) {
-            let hook = UseTodoListView()
+        await withMocks(configure: { repo, _ in
+            repo.fetchAllHandler = {
+                throw URLError(.badURL)
+            }
+        }) { hook, _ in
             await hook.todoList.fetchAll()
 
             #expect(hook.hasError == true)
@@ -141,19 +128,15 @@ struct UseTodoListViewTests {
 
     @Test("retry: fetchAllが呼ばれる")
     func retry() async {
-        let mockUseCase = TodoUseCaseProtocolMock()
-        mockUseCase._todos = [Todo(title: "Todo1")]
-        mockUseCase.fetchAllHandler = { }
-
-        await withTestInjection(configure: { store in
-            store.register(mockUseCase, for: (any TodoUseCaseProtocol).self)
-        }) {
-            let hook = UseTodoListView()
+        let todos = [Todo(title: "Todo1")]
+        await withMocks(todos: todos, configure: { repo, _ in
+            repo.fetchAllHandler = { }
+        }) { hook, repo in
             await hook.retry()
             #expect(hook.todoList.todos.count == 1)
 
             await hook.retry()
-            #expect(mockUseCase.fetchAllCallCount == 2)
+            #expect(repo.fetchAllCallCount == 2)
         }
     }
 
@@ -161,14 +144,7 @@ struct UseTodoListViewTests {
 
     @Test("showForm: isFormPresentedがtrueになる")
     func showForm() async {
-        let mockUseCase = TodoUseCaseProtocolMock()
-        mockUseCase._todos = []
-
-        await withTestInjection(configure: { store in
-            store.register(mockUseCase, for: (any TodoUseCaseProtocol).self)
-        }) {
-            let hook = UseTodoListView()
-
+        await withMocks { hook, _ in
             #expect(hook.isFormPresented == false)
             hook.showForm()
             #expect(hook.isFormPresented == true)
@@ -177,14 +153,9 @@ struct UseTodoListViewTests {
 
     @Test("submitForm: isFormPresentedがfalseになりaddが呼ばれる")
     func submitForm() async {
-        let mockUseCase = TodoUseCaseProtocolMock()
-        mockUseCase._todos = []
-        mockUseCase.addHandler = { _ in }
-
-        await withTestInjection(configure: { store in
-            store.register(mockUseCase, for: (any TodoUseCaseProtocol).self)
-        }) {
-            let hook = UseTodoListView()
+        await withMocks(configure: { repo, _ in
+            repo.addHandler = { _ in }
+        }) { hook, repo in
             hook.showForm()
 
             #expect(hook.isFormPresented == true)
@@ -192,7 +163,7 @@ struct UseTodoListViewTests {
             #expect(hook.isFormPresented == false)
 
             try? await Task.sleep(for: .milliseconds(10))
-            #expect(mockUseCase.addCallCount == 1)
+            #expect(repo.addCallCount == 1)
         }
     }
 }

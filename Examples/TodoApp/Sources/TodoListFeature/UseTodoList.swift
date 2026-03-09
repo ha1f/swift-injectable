@@ -4,19 +4,19 @@ import SwiftInjectable
 import SwiftUI
 
 /// Todoリストの状態管理を提供するhook
-/// todosはUseCase（Repository）から直接参照するため、
-/// 他のhookからのadd/deleteも自動的に反映される
+/// UseTodoRepositoryを合成し、ローディング/エラー状態を管理する
 @Hook
 @MainActor
 public struct UseTodoList {
-    @Injected var todoUseCase: any TodoUseCaseProtocol
+    /// UseTodoRepositoryを合成してRepository操作を委譲する
+    public let todoRepo = UseTodoRepository()
 
     public var isLoading: Bool = false
     public var error: (any Error)? = nil
 
     /// Repository が保持する最新のTodoリスト
     public var todos: [Todo] {
-        todoUseCase.todos
+        todoRepo.todos
     }
 
     /// Todo一覧を取得する
@@ -24,7 +24,7 @@ public struct UseTodoList {
         isLoading = true
         defer { isLoading = false }
         do {
-            try await todoUseCase.fetchAll()
+            try await todoRepo.fetchAll()
             error = nil
         } catch {
             self.error = error
@@ -34,7 +34,7 @@ public struct UseTodoList {
     /// Todoの完了状態をトグルする
     public func toggleCompletion(_ todo: Todo) async {
         do {
-            try await todoUseCase.toggleCompletion(todo)
+            try await todoRepo.toggleCompletion(todo)
             error = nil
         } catch {
             self.error = error
@@ -44,7 +44,7 @@ public struct UseTodoList {
     /// Todoを削除する
     public func delete(id: UUID) async {
         do {
-            try await todoUseCase.delete(id: id)
+            try await todoRepo.delete(id: id)
             error = nil
         } catch {
             self.error = error
@@ -54,7 +54,7 @@ public struct UseTodoList {
     /// Todoを追加する
     public func add(title: String) async {
         do {
-            try await todoUseCase.add(title: title)
+            try await todoRepo.add(title: title)
             error = nil
         } catch {
             self.error = error
