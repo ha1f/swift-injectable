@@ -12,7 +12,4 @@ class AppDependencies {
 
     @Provide(as: (any TodoRepositoryProtocol).self)
     lazy var repository = InMemoryTodoRepository()
-
-    @Provide(as: (any TodoUseCaseProtocol).self)
-    lazy var todoUseCase = TodoUseCase(repository: repository, logger: logger)
 }

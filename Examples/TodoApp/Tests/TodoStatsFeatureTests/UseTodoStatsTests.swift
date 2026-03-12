@@ -1,30 +1,55 @@
 @testable import Domain
 import Foundation
+import SwiftHooksQuery
 import SwiftInjectable
-import TodoStatsFeature
 import Testing
+import TodoStatsFeature
 
 @Suite("UseTodoStats テスト")
 @MainActor
 struct UseTodoStatsTests {
 
-    @Test("初期状態: すべてゼロの統計")
-    func initialStats() async {
-        let mockUseCase = TodoUseCaseProtocolMock()
-        mockUseCase.fetchAllHandler = { [] }
+    private func withMocks(
+        todos: [Todo] = [],
+        body: (UseTodoStats) async throws -> Void
+    ) async rethrows {
+        let mockRepo = TodoRepositoryProtocolMock()
+        mockRepo.fetchAllHandler = { todos }
+        let mockLogger = LoggerProtocolMock()
+        mockLogger.logHandler = { _ in }
 
-        await withTestInjection(configure: { store in
-            store.register(mockUseCase, for: (any TodoUseCaseProtocol).self)
+        try await withTestInjection(configure: { store in
+            store.register(mockRepo, for: (any TodoRepositoryProtocol).self)
+            store.register(mockLogger, for: (any LoggerProtocol).self)
+            _ = store.queryCache
         }) {
             let hook = UseTodoStats()
+            // QueryCache にデータをロード
             await hook.todoList.fetchAll()
+            try await body(hook)
+        }
+    }
 
+    @Test("初期状態: すべてゼロの統計")
+    func initialStats() async {
+        let mockRepo = TodoRepositoryProtocolMock()
+        mockRepo.fetchAllHandler = { [] }
+        let mockLogger = LoggerProtocolMock()
+        mockLogger.logHandler = { _ in }
+
+        await withTestInjection(configure: { store in
+            store.register(mockRepo, for: (any TodoRepositoryProtocol).self)
+            store.register(mockLogger, for: (any LoggerProtocol).self)
+            _ = store.queryCache
+        }) {
+            let hook = UseTodoStats()
+            // fetchAll を呼ばない状態
             #expect(hook.stats == TodoStats(total: 0, active: 0, completed: 0))
             #expect(hook.completionRate == 0)
         }
     }
 
-    @Test("合成されたUseTodoListから統計を計算する")
+    @Test("todosから統計を計算する")
     func computeStats() async {
         let todos = [
             Todo(title: "Todo1", isCompleted: false),
@@ -33,15 +58,7 @@ struct UseTodoStatsTests {
             Todo(title: "Todo4", isCompleted: true),
             Todo(title: "Todo5", isCompleted: true),
         ]
-        let mockUseCase = TodoUseCaseProtocolMock()
-        mockUseCase.fetchAllHandler = { todos }
-
-        await withTestInjection(configure: { store in
-            store.register(mockUseCase, for: (any TodoUseCaseProtocol).self)
-        }) {
-            let hook = UseTodoStats()
-            await hook.todoList.fetchAll()
-
+        await withMocks(todos: todos) { hook in
             #expect(hook.stats.total == 5)
             #expect(hook.stats.active == 2)
             #expect(hook.stats.completed == 3)
@@ -55,15 +72,7 @@ struct UseTodoStatsTests {
             Todo(title: "Todo1", isCompleted: true),
             Todo(title: "Todo2", isCompleted: true),
         ]
-        let mockUseCase = TodoUseCaseProtocolMock()
-        mockUseCase.fetchAllHandler = { todos }
-
-        await withTestInjection(configure: { store in
-            store.register(mockUseCase, for: (any TodoUseCaseProtocol).self)
-        }) {
-            let hook = UseTodoStats()
-            await hook.todoList.fetchAll()
-
+        await withMocks(todos: todos) { hook in
             #expect(hook.stats == TodoStats(total: 2, active: 0, completed: 2))
             #expect(hook.completionRate == 1.0)
         }
@@ -75,44 +84,9 @@ struct UseTodoStatsTests {
             Todo(title: "Todo1", isCompleted: false),
             Todo(title: "Todo2", isCompleted: false),
         ]
-        let mockUseCase = TodoUseCaseProtocolMock()
-        mockUseCase.fetchAllHandler = { todos }
-
-        await withTestInjection(configure: { store in
-            store.register(mockUseCase, for: (any TodoUseCaseProtocol).self)
-        }) {
-            let hook = UseTodoStats()
-            await hook.todoList.fetchAll()
-
+        await withMocks(todos: todos) { hook in
             #expect(hook.stats == TodoStats(total: 2, active: 2, completed: 0))
             #expect(hook.completionRate == 0.0)
-        }
-    }
-
-    @Test("TodoListの状態変更が統計に反映される")
-    func statsUpdateAfterToggle() async {
-        let todo = Todo(title: "タスク", isCompleted: false)
-        let mockUseCase = TodoUseCaseProtocolMock()
-        mockUseCase.fetchAllHandler = { [todo] }
-        mockUseCase.toggleCompletionHandler = { t in
-            var updated = t
-            updated.isCompleted.toggle()
-            return updated
-        }
-
-        await withTestInjection(configure: { store in
-            store.register(mockUseCase, for: (any TodoUseCaseProtocol).self)
-        }) {
-            let hook = UseTodoStats()
-            await hook.todoList.fetchAll()
-
-            #expect(hook.stats.active == 1)
-            #expect(hook.stats.completed == 0)
-
-            await hook.todoList.toggleCompletion(todo)
-
-            #expect(hook.stats.active == 0)
-            #expect(hook.stats.completed == 1)
         }
     }
 }

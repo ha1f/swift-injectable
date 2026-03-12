@@ -4,6 +4,7 @@ import Foundation
 import Testing
 
 @Suite("InMemoryTodoRepository テスト")
+@MainActor
 struct InMemoryTodoRepositoryTests {
 
     @Test("初期状態: 空のリストを返す")
@@ -17,20 +18,20 @@ struct InMemoryTodoRepositoryTests {
     func fetchAllWithInitial() async throws {
         let initial = [Todo(title: "初期Todo")]
         let repo = InMemoryTodoRepository(initialTodos: initial)
-        let todos = try await repo.fetchAll()
 
+        let todos = try await repo.fetchAll()
         #expect(todos.count == 1)
         #expect(todos[0].title == "初期Todo")
     }
 
-    @Test("add: Todoを追加してfetchAllで取得できる")
+    @Test("add: Todoを追加するとfetchAllに反映される")
     func addAndFetch() async throws {
         let repo = InMemoryTodoRepository()
         let todo = Todo(title: "追加されたTodo")
 
         try await repo.add(todo)
-        let todos = try await repo.fetchAll()
 
+        let todos = try await repo.fetchAll()
         #expect(todos.count == 1)
         #expect(todos[0] == todo)
     }
@@ -96,7 +97,6 @@ struct InMemoryTodoRepositoryTests {
         try await repo.add(todo2)
         try await repo.add(todo3)
 
-        // 1つ削除
         try await repo.delete(id: todo2.id)
 
         let todos = try await repo.fetchAll()

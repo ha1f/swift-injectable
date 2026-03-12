@@ -20,6 +20,10 @@ let package = Package(
       name: "SwiftHooks",
       targets: ["SwiftHooks"]
     ),
+    .library(
+      name: "SwiftHooksQuery",
+      targets: ["SwiftHooksQuery"]
+    ),
   ],
   dependencies: [
     .package(url: "https://github.com/swiftlang/swift-syntax", "509.0.0"..<"603.0.0"),
@@ -61,6 +65,17 @@ let package = Package(
         "SwiftHooks",
         "SwiftHooksMacrosPlugin",
         .product(name: "SwiftSyntaxMacrosTestSupport", package: "swift-syntax"),
+      ]
+    ),
+    .target(
+      name: "SwiftHooksQuery",
+      dependencies: ["SwiftInjectable"]
+    ),
+    .testTarget(
+      name: "SwiftHooksQueryTests",
+      dependencies: [
+        "SwiftHooksQuery",
+        "SwiftInjectable",
       ]
     ),
   ],

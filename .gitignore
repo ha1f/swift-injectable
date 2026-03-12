@@ -7,3 +7,4 @@ DerivedData/
 .swiftpm/xcode/xcshareddata/
 .netrc
 Package.resolved
+.claude/tmp/
