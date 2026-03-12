@@ -4,15 +4,22 @@ swift-injectable の高度な使用パターンを示すサンプルアプリで
 
 ## アーキテクチャ
 
-Clean Architecture に基づいた構成です。
+Feature モジュールごとに分割された構成です。
 
 ```
 Sources/
-├── Domain/          # モデル、プロトコル、ユースケース
-├── Data/            # InMemoryTodoRepository（リポジトリ実装）
-├── Infrastructure/  # ConsoleLogger（ログ実装）
-├── Presentation/    # Hooks（状態管理）+ Views（UI）
-└── App/             # エントリポイントと依存コンテナ
+├── Domain/                       # モデル、プロトコル（@Observable Repository）
+├── Data/                         # InMemoryTodoRepository（リポジトリ実装）
+├── Infrastructure/               # ConsoleLogger（ログ実装）
+├── Feature/
+│   ├── TodoListFeature/          # Todo一覧画面（hooks + views）
+│   ├── TodoDetailFeature/        # Todo詳細画面
+│   ├── TodoFormFeature/          # Todo入力フォーム
+│   └── TodoStatsFeature/         # 統計表示
+└── App/                          # エントリポイントと依存コンテナ
+Tests/
+├── TestSupport/                  # withTodoMocks 等のテスト共通ヘルパー
+└── *FeatureTests/                # 各Featureのテスト
 ```
 
 ## 主な機能
@@ -24,7 +31,9 @@ Sources/
 ## デモするパターン
 
 ### @Hook マクロ
-- `UseTodoList` — 複数の `@Injected` 依存を持つhook
+- `UseTodoRepository` — Repository + Logger のビジネスロジックをまとめたhook
+- `UseTodoList` — `UseTodoRepository` を合成し、ローディング/エラー状態を管理するhook
+- `UseTodoListView` — `UseTodoList` + `UseTodoFilter` を合成した画面用hook
 - `UseTodoForm` — フォーム入力バリデーション
 - `UseTodoFilter` — DI不要な純粋ロジックhook
 - `UseTodoStats` — `UseTodoList` を合成して統計を導出するhook
@@ -33,11 +42,11 @@ Sources/
 - `AppDependencies` — 全依存を一括登録するコンテナ
 
 ### @Injected プロパティラッパー
-- Hookから `TodoUseCaseProtocol` 等のプロトコルを解決
+- Hookから `TodoRepositoryProtocol` / `LoggerProtocol` を解決
 
-### withTestInjection
+### withTestInjection + withTodoMocks
 - TaskLocalベースのテスト用DI（`.serialized` 不要で並列テスト可能）
-- 楽観的更新のロールバック検証
+- `TestSupport/withTodoMocks` でモック設定を簡潔に記述
 - Hook合成（UseTodoStats ← UseTodoList）のテスト
 
 ## ビルド・テスト
