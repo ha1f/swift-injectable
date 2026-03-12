@@ -1,5 +1,4 @@
 /// クエリキャッシュのキーを定義するプロトコル
-/// `SharedStateKey` と同じパターンで使用する
 ///
 /// ```swift
 /// private enum TodosQueryKey: QueryKey {
