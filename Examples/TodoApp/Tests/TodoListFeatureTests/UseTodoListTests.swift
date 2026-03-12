@@ -2,31 +2,12 @@
 import Foundation
 import SwiftInjectable
 import Testing
+import TestSupport
 import TodoListFeature
 
 @Suite("UseTodoList テスト")
 @MainActor
 struct UseTodoListTests {
-
-    private func withMocks(
-        todos: [Todo] = [],
-        configure: ((TodoRepositoryProtocolMock, LoggerProtocolMock) -> Void)? = nil,
-        body: (UseTodoList) async throws -> Void
-    ) async rethrows {
-        let mockRepo = TodoRepositoryProtocolMock()
-        mockRepo._todos = todos
-        let mockLogger = LoggerProtocolMock()
-        mockLogger.logHandler = { _ in }
-        configure?(mockRepo, mockLogger)
-
-        try await withTestInjection(configure: { store in
-            store.register(mockRepo, for: (any TodoRepositoryProtocol).self)
-            store.register(mockLogger, for: (any LoggerProtocol).self)
-        }) {
-            let hook = UseTodoList()
-            try await body(hook)
-        }
-    }
 
     @Test("fetchAll: 取得成功時にtodosが設定される")
     func fetchAllSuccess() async {
@@ -34,9 +15,11 @@ struct UseTodoListTests {
             Todo(title: "Todo1"),
             Todo(title: "Todo2"),
         ]
-        await withMocks(todos: expected, configure: { repo, _ in
+        await withTodoMocks(todos: expected, configure: { repo in
             repo.fetchAllHandler = { }
-        }) { hook in
+        }) { _ in
+            let hook = UseTodoList()
+
             #expect(hook.isLoading == false)
             #expect(hook.error == nil)
 
@@ -50,11 +33,10 @@ struct UseTodoListTests {
 
     @Test("fetchAll: 取得失敗時にerrorが設定される")
     func fetchAllFailure() async {
-        await withMocks(configure: { repo, _ in
-            repo.fetchAllHandler = {
-                throw URLError(.notConnectedToInternet)
-            }
-        }) { hook in
+        await withTodoMocks(configure: { repo in
+            repo.fetchAllHandler = { throw URLError(.notConnectedToInternet) }
+        }) { _ in
+            let hook = UseTodoList()
             await hook.fetchAll()
 
             #expect(hook.error != nil)
@@ -65,9 +47,10 @@ struct UseTodoListTests {
     @Test("toggleCompletion: Repositoryが呼ばれる")
     func toggleCompletion() async {
         let todo = Todo(title: "タスク", isCompleted: false)
-        await withMocks(todos: [todo], configure: { repo, _ in
+        await withTodoMocks(todos: [todo], configure: { repo in
             repo.updateHandler = { _ in }
-        }) { hook in
+        }) { _ in
+            let hook = UseTodoList()
             await hook.toggleCompletion(todo)
 
             #expect(hook.error == nil)
@@ -77,11 +60,10 @@ struct UseTodoListTests {
     @Test("toggleCompletion: 失敗時にerrorが設定される")
     func toggleCompletionFailure() async {
         let todo = Todo(title: "タスク", isCompleted: false)
-        await withMocks(todos: [todo], configure: { repo, _ in
-            repo.updateHandler = { _ in
-                throw URLError(.badServerResponse)
-            }
-        }) { hook in
+        await withTodoMocks(todos: [todo], configure: { repo in
+            repo.updateHandler = { _ in throw URLError(.badServerResponse) }
+        }) { _ in
+            let hook = UseTodoList()
             await hook.toggleCompletion(todo)
 
             #expect(hook.error != nil)
@@ -91,9 +73,10 @@ struct UseTodoListTests {
     @Test("delete: Repositoryが呼ばれる")
     func deleteSuccess() async {
         let todo = Todo(title: "削除対象")
-        await withMocks(todos: [todo], configure: { repo, _ in
+        await withTodoMocks(todos: [todo], configure: { repo in
             repo.deleteHandler = { _ in }
-        }) { hook in
+        }) { _ in
+            let hook = UseTodoList()
             await hook.delete(id: todo.id)
 
             #expect(hook.error == nil)
@@ -103,9 +86,10 @@ struct UseTodoListTests {
     @Test("delete: 失敗時にerrorが設定される")
     func deleteFailure() async {
         let todo = Todo(title: "削除対象")
-        await withMocks(todos: [todo], configure: { repo, _ in
+        await withTodoMocks(todos: [todo], configure: { repo in
             repo.deleteHandler = { _ in throw URLError(.badServerResponse) }
-        }) { hook in
+        }) { _ in
+            let hook = UseTodoList()
             await hook.delete(id: todo.id)
 
             #expect(hook.error != nil)
@@ -114,9 +98,10 @@ struct UseTodoListTests {
 
     @Test("add: Repositoryが呼ばれる")
     func addSuccess() async {
-        await withMocks(configure: { repo, _ in
+        await withTodoMocks(configure: { repo in
             repo.addHandler = { _ in }
-        }) { hook in
+        }) { _ in
+            let hook = UseTodoList()
             await hook.add(title: "新規Todo")
 
             #expect(hook.error == nil)
@@ -125,9 +110,10 @@ struct UseTodoListTests {
 
     @Test("clearError: エラーがクリアされる")
     func clearError() async {
-        await withMocks(configure: { repo, _ in
+        await withTodoMocks(configure: { repo in
             repo.fetchAllHandler = { throw URLError(.badURL) }
-        }) { hook in
+        }) { _ in
+            let hook = UseTodoList()
             await hook.fetchAll()
 
             #expect(hook.error != nil)
