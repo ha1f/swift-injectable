@@ -19,7 +19,7 @@ import SwiftUI
 /// ```
 @MainActor
 public struct UseQuery<Value: Sendable>: DynamicProperty {
-    @Environment(\.queryCache) private var _environmentCache
+    @Injected(default: QueryCache()) var cacheRepository: QueryCache
     private let keyPath: KeyPath<QueryCache, QueryEntry<Value>>
     private let cachePolicy: QueryCachePolicy
 
@@ -31,16 +31,8 @@ public struct UseQuery<Value: Sendable>: DynamicProperty {
         self.cachePolicy = cachePolicy
     }
 
-    private var cache: QueryCache {
-        if let override = InjectionOverride.current,
-           let cache = override.resolve(QueryCache.self) {
-            return cache
-        }
-        return _environmentCache
-    }
-
     private var entry: QueryEntry<Value> {
-        cache[keyPath: keyPath]
+        cacheRepository[keyPath: keyPath]
     }
 
     /// 取得済みデータ
