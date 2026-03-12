@@ -1,5 +1,6 @@
 @testable import Domain
 import Foundation
+import SwiftHooksQuery
 import SwiftInjectable
 import Testing
 import TodoStatsFeature
@@ -13,22 +14,36 @@ struct UseTodoStatsTests {
         body: (UseTodoStats) async throws -> Void
     ) async rethrows {
         let mockRepo = TodoRepositoryProtocolMock()
-        mockRepo._todos = todos
+        mockRepo.fetchAllHandler = { todos }
         let mockLogger = LoggerProtocolMock()
         mockLogger.logHandler = { _ in }
 
         try await withTestInjection(configure: { store in
             store.register(mockRepo, for: (any TodoRepositoryProtocol).self)
             store.register(mockLogger, for: (any LoggerProtocol).self)
+            _ = store.queryCache
         }) {
             let hook = UseTodoStats()
+            // QueryCache にデータをロード
+            await hook.todoList.fetchAll()
             try await body(hook)
         }
     }
 
     @Test("初期状態: すべてゼロの統計")
     func initialStats() async {
-        await withMocks { hook in
+        let mockRepo = TodoRepositoryProtocolMock()
+        mockRepo.fetchAllHandler = { [] }
+        let mockLogger = LoggerProtocolMock()
+        mockLogger.logHandler = { _ in }
+
+        await withTestInjection(configure: { store in
+            store.register(mockRepo, for: (any TodoRepositoryProtocol).self)
+            store.register(mockLogger, for: (any LoggerProtocol).self)
+            _ = store.queryCache
+        }) {
+            let hook = UseTodoStats()
+            // fetchAll を呼ばない状態
             #expect(hook.stats == TodoStats(total: 0, active: 0, completed: 0))
             #expect(hook.completionRate == 0)
         }

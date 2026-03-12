@@ -15,9 +15,7 @@ struct UseTodoListTests {
             Todo(title: "Todo1"),
             Todo(title: "Todo2"),
         ]
-        await withTodoMocks(todos: expected, configure: { repo in
-            repo.fetchAllHandler = { }
-        }) { _ in
+        await withTodoMocks(todos: expected) { _ in
             let hook = UseTodoList()
 
             #expect(hook.isLoading == false)

@@ -19,6 +19,7 @@ struct UseTodoListViewTests {
         ]
         await withTodoMocks(todos: todos) { _ in
             let hook = UseTodoListView()
+            await hook.todoList.fetchAll()
             #expect(hook.filteredTodos.count == 2)
         }
     }
@@ -32,6 +33,7 @@ struct UseTodoListViewTests {
         ]
         await withTodoMocks(todos: todos) { _ in
             let hook = UseTodoListView()
+            await hook.todoList.fetchAll()
             hook.filter.currentFilter = .active
 
             #expect(hook.filteredTodos.count == 2)
@@ -52,6 +54,7 @@ struct UseTodoListViewTests {
             repo.deleteHandler = { _ in }
         }) { repo in
             let hook = UseTodoListView()
+            await hook.todoList.fetchAll()
             hook.filter.currentFilter = .active
 
             #expect(hook.filteredTodos.count == 2)
@@ -67,9 +70,7 @@ struct UseTodoListViewTests {
 
     @Test("hasError: エラーがない場合はfalse")
     func hasErrorFalse() async {
-        await withTodoMocks(configure: { repo in
-            repo.fetchAllHandler = { }
-        }) { _ in
+        await withTodoMocks { _ in
             let hook = UseTodoListView()
             await hook.todoList.fetchAll()
 
@@ -112,13 +113,12 @@ struct UseTodoListViewTests {
     @Test("retry: fetchAllが呼ばれる")
     func retry() async {
         let todos = [Todo(title: "Todo1")]
-        await withTodoMocks(todos: todos, configure: { repo in
-            repo.fetchAllHandler = { }
-        }) { repo in
+        await withTodoMocks(todos: todos) { repo in
             let hook = UseTodoListView()
             await hook.retry()
             #expect(hook.todoList.todos.count == 1)
 
+            hook.todoList.query.invalidate()
             await hook.retry()
             #expect(repo.fetchAllCallCount == 2)
         }

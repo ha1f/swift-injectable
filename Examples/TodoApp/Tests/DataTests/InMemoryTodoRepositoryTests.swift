@@ -10,7 +10,8 @@ struct InMemoryTodoRepositoryTests {
     @Test("初期状態: 空のリストを返す")
     func fetchAllEmpty() async throws {
         let repo = InMemoryTodoRepository()
-        #expect(repo.todos.isEmpty)
+        let todos = try await repo.fetchAll()
+        #expect(todos.isEmpty)
     }
 
     @Test("初期値付き: 指定したTodoが含まれる")
@@ -18,19 +19,21 @@ struct InMemoryTodoRepositoryTests {
         let initial = [Todo(title: "初期Todo")]
         let repo = InMemoryTodoRepository(initialTodos: initial)
 
-        #expect(repo.todos.count == 1)
-        #expect(repo.todos[0].title == "初期Todo")
+        let todos = try await repo.fetchAll()
+        #expect(todos.count == 1)
+        #expect(todos[0].title == "初期Todo")
     }
 
-    @Test("add: Todoを追加するとtodosに反映される")
+    @Test("add: Todoを追加するとfetchAllに反映される")
     func addAndFetch() async throws {
         let repo = InMemoryTodoRepository()
         let todo = Todo(title: "追加されたTodo")
 
         try await repo.add(todo)
 
-        #expect(repo.todos.count == 1)
-        #expect(repo.todos[0] == todo)
+        let todos = try await repo.fetchAll()
+        #expect(todos.count == 1)
+        #expect(todos[0] == todo)
     }
 
     @Test("update: 既存のTodoを更新する")
@@ -43,8 +46,9 @@ struct InMemoryTodoRepositoryTests {
         updated.isCompleted = true
         try await repo.update(updated)
 
-        #expect(repo.todos[0].title == "更新されたタイトル")
-        #expect(repo.todos[0].isCompleted == true)
+        let todos = try await repo.fetchAll()
+        #expect(todos[0].title == "更新されたタイトル")
+        #expect(todos[0].isCompleted == true)
     }
 
     @Test("update: 存在しないIDでエラーになる")
@@ -66,7 +70,8 @@ struct InMemoryTodoRepositoryTests {
         let repo = InMemoryTodoRepository(initialTodos: [todo])
 
         try await repo.delete(id: todo.id)
-        #expect(repo.todos.isEmpty)
+        let todos = try await repo.fetchAll()
+        #expect(todos.isEmpty)
     }
 
     @Test("delete: 存在しないIDでエラーになる")
@@ -94,7 +99,8 @@ struct InMemoryTodoRepositoryTests {
 
         try await repo.delete(id: todo2.id)
 
-        #expect(repo.todos.count == 2)
-        #expect(repo.todos.map(\.title) == ["Todo1", "Todo3"])
+        let todos = try await repo.fetchAll()
+        #expect(todos.count == 2)
+        #expect(todos.map(\.title) == ["Todo1", "Todo3"])
     }
 }

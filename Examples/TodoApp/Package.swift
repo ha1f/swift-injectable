@@ -38,6 +38,7 @@ let package = Package(
                 "TodoFormFeature",
                 .product(name: "SwiftInjectable", package: "swift-injectable"),
                 .product(name: "SwiftHooks", package: "swift-injectable"),
+                .product(name: "SwiftHooksQuery", package: "swift-injectable"),
             ],
             path: "Sources/Feature/TodoListFeature"
         ),
@@ -83,6 +84,7 @@ let package = Package(
             dependencies: [
                 "Domain",
                 .product(name: "SwiftInjectable", package: "swift-injectable"),
+                .product(name: "SwiftHooksQuery", package: "swift-injectable"),
                 .product(name: "Mockable", package: "swift-mockable"),
             ],
             path: "Tests/TestSupport"
@@ -121,6 +123,7 @@ let package = Package(
                 "TodoStatsFeature",
                 "TestSupport",
                 .product(name: "SwiftInjectable", package: "swift-injectable"),
+                .product(name: "SwiftHooksQuery", package: "swift-injectable"),
                 .product(name: "Mockable", package: "swift-mockable"),
             ],
             path: "Tests/TodoStatsFeatureTests"

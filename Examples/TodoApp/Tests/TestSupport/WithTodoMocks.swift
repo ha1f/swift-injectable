@@ -1,9 +1,10 @@
 @testable import Domain
 import Foundation
+import SwiftHooksQuery
 import SwiftInjectable
 
 /// Todoアプリのテスト用共通ヘルパー
-/// Repository + Logger のモックを自動セットアップし、テストコードを簡潔にする
+/// Repository + Logger + QueryCache のモックを自動セットアップし、テストコードを簡潔にする
 @MainActor
 public func withTodoMocks(
     todos: [Todo] = [],
@@ -11,7 +12,7 @@ public func withTodoMocks(
     body: (TodoRepositoryProtocolMock) async throws -> Void
 ) async rethrows {
     let repo = TodoRepositoryProtocolMock()
-    repo._todos = todos
+    repo.fetchAllHandler = { todos }
     let logger = LoggerProtocolMock()
     logger.logHandler = { _ in }
     configure?(repo)
@@ -19,6 +20,7 @@ public func withTodoMocks(
     try await withTestInjection(configure: { store in
         store.register(repo, for: (any TodoRepositoryProtocol).self)
         store.register(logger, for: (any LoggerProtocol).self)
+        _ = store.queryCache
     }) {
         try await body(repo)
     }

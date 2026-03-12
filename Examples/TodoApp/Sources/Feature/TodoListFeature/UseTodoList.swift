@@ -1,40 +1,54 @@
 import Domain
+import Foundation
 import SwiftHooks
+import SwiftHooksQuery
 import SwiftInjectable
 import SwiftUI
 
 /// Todoリストの状態管理を提供するhook
-/// UseTodoRepositoryを合成し、ローディング/エラー状態を管理する
+/// UseQueryでキャッシュを管理し、Repository操作のエラーハンドリングを行う
 @Hook
 @MainActor
 public struct UseTodoList {
-    /// UseTodoRepositoryを合成してRepository操作を委譲する
-    public let todoRepo = UseTodoRepository()
+    @Injected var repository: any TodoRepositoryProtocol
+    @Injected var logger: any LoggerProtocol
 
-    public var isLoading: Bool = false
+    public let query = UseQuery(\.todos)
+
     public var error: (any Error)? = nil
 
-    /// Repository が保持する最新のTodoリスト
+    /// キャッシュ上の最新のTodoリスト
     public var todos: [Todo] {
-        todoRepo.todos
+        query.data ?? []
+    }
+
+    /// ローディング中かどうか
+    public var isLoading: Bool {
+        query.isLoading
     }
 
     /// Todo一覧を取得する
     public func fetchAll() async {
-        isLoading = true
-        defer { isLoading = false }
-        do {
-            try await todoRepo.fetchAll()
+        await query.fetch {
+            try await repository.fetchAll()
+        }
+        if let queryError = query.error {
+            error = queryError
+        } else {
             error = nil
-        } catch {
-            self.error = error
         }
     }
 
     /// Todoの完了状態をトグルする
     public func toggleCompletion(_ todo: Todo) async {
         do {
-            try await todoRepo.toggleCompletion(todo)
+            var updated = todo
+            updated.isCompleted.toggle()
+            try await repository.update(updated)
+            logger.log("Todoの完了状態を変更: \(todo.title) → \(updated.isCompleted)")
+            // キャッシュを更新
+            query.invalidate()
+            await query.fetch { try await repository.fetchAll() }
             error = nil
         } catch {
             self.error = error
@@ -44,7 +58,10 @@ public struct UseTodoList {
     /// Todoを削除する
     public func delete(id: UUID) async {
         do {
-            try await todoRepo.delete(id: id)
+            try await repository.delete(id: id)
+            logger.log("Todoを削除: \(id)")
+            query.invalidate()
+            await query.fetch { try await repository.fetchAll() }
             error = nil
         } catch {
             self.error = error
@@ -54,7 +71,11 @@ public struct UseTodoList {
     /// Todoを追加する
     public func add(title: String) async {
         do {
-            try await todoRepo.add(title: title)
+            let todo = Todo(title: title)
+            try await repository.add(todo)
+            logger.log("Todoを追加: \(title)")
+            query.invalidate()
+            await query.fetch { try await repository.fetchAll() }
             error = nil
         } catch {
             self.error = error
