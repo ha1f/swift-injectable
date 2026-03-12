@@ -95,5 +95,5 @@ await withTestInjection(configure: { store in
 
 1. **QueryKey** で型安全なキーを定義。`QueryCache` の extension で computed property を生やすことで `KeyPath` でアクセス可能にする
 2. **QueryCache** は `ObjectIdentifier` をキーとして `QueryEntry` を管理。同じキーの `UseQuery` は同じ `QueryEntry` インスタンスを共有する
-3. **UseQuery** は SwiftUI `Environment` または `InjectionOverride`（テスト時）から `QueryCache` を解決し、`KeyPath` で `QueryEntry` にアクセスする
+3. **UseQuery** は `@Injected` で `QueryCache` を解決し（テスト時は `withTestInjection` でオーバーライド）、`KeyPath` で `QueryEntry` にアクセスする
 4. **QueryEntry** は `@Observable` なので、`data` / `isLoading` / `error` の変更が自動的に SwiftUI のビュー更新を駆動する

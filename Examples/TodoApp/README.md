@@ -8,7 +8,7 @@ Feature モジュールごとに分割された構成です。
 
 ```
 Sources/
-├── Domain/                       # モデル、プロトコル（@Observable Repository）
+├── Domain/                       # モデル、プロトコル
 ├── Data/                         # InMemoryTodoRepository（リポジトリ実装）
 ├── Infrastructure/               # ConsoleLogger（ログ実装）
 ├── Feature/
@@ -30,13 +30,13 @@ Tests/
 
 ## デモするパターン
 
-### @Hook マクロ
-- `UseTodoRepository` — Repository + Logger のビジネスロジックをまとめたhook
-- `UseTodoList` — `UseTodoRepository` を合成し、ローディング/エラー状態を管理するhook
+### @Hook マクロ + UseQuery
+- `UseTodoList` — `UseQuery` でキャッシュ管理し、Repository 操作 + エラーハンドリングを行うhook
 - `UseTodoListView` — `UseTodoList` + `UseTodoFilter` を合成した画面用hook
 - `UseTodoForm` — フォーム入力バリデーション
 - `UseTodoFilter` — DI不要な純粋ロジックhook
 - `UseTodoStats` — `UseTodoList` を合成して統計を導出するhook
+- `TodosQueryKey` — Todoリストの `QueryKey` 定義 + `QueryCache` extension
 
 ### @Provider / @Provide マクロ
 - `AppDependencies` — 全依存を一括登録するコンテナ
