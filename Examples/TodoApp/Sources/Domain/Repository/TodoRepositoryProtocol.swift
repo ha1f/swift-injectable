@@ -3,7 +3,6 @@ import Mockable
 
 /// Todoの永続化を担うリポジトリ
 @Mockable
-@MainActor
 public protocol TodoRepositoryProtocol: Sendable {
     func fetchAll() async throws -> [Todo]
     func add(_ todo: Todo) async throws

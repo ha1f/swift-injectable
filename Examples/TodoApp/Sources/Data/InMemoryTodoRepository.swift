@@ -2,8 +2,7 @@ import Domain
 import Foundation
 
 /// インメモリのTodoリポジトリ実装
-@MainActor
-public final class InMemoryTodoRepository: TodoRepositoryProtocol {
+public actor InMemoryTodoRepository: TodoRepositoryProtocol {
     private var todos: [Todo]
 
     public init(initialTodos: [Todo] = []) {
