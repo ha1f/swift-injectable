@@ -6,7 +6,7 @@ import SwiftUI
 @Hook
 @MainActor
 public struct UseTodoFilter {
-    public var currentFilter: TodoFilter = .all
+    @HookState public var currentFilter: TodoFilter = .all
 
     /// フィルターに基づいてTodoリストを絞り込む
     public func apply(to todos: [Todo]) -> [Todo] {

@@ -15,7 +15,7 @@ public struct UseTodoList {
 
     public let query = UseQuery(\.todos)
 
-    public var error: (any Error)? = nil
+    @HookState public var error: (any Error)? = nil
 
     /// キャッシュ上の最新のTodoリスト
     public var todos: [Todo] {

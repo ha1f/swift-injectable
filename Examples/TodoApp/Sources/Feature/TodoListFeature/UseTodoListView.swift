@@ -12,7 +12,7 @@ public struct UseTodoListView {
     public let filter = UseTodoFilter()
 
     /// フォーム表示状態
-    public var isFormPresented: Bool = false
+    @HookState public var isFormPresented: Bool = false
 
     /// フィルタ適用済みのTodoリスト
     public var filteredTodos: [Todo] {

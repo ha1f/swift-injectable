@@ -86,7 +86,7 @@ struct ContentView: View {
 @Hook
 @MainActor
 struct UseCounter {
-    var count: Int = 0
+    @HookState var count: Int = 0
     func increment() { count += 1 }
 }
 
@@ -151,8 +151,10 @@ func counterIncrements() {
 
 | Example | Description |
 |---|---|
-| [`Examples/BasicExample`](Examples/BasicExample) | Simple multi-module app — counter hooks, user fetch with DI |
-| [`Examples/TodoApp`](Examples/TodoApp) | Feature-module app — CRUD, filtering, hook composition, test helpers |
+| [`Examples/Counter`](Examples/Counter) | Minimal — `@Hook` + `@HookState` only, no DI |
+| [`Examples/Greeting`](Examples/Greeting) | Simple multi-module app — hooks with `@Injected` DI |
+| [`Examples/GreetingWithDependencies`](Examples/GreetingWithDependencies) | Same app using [swift-dependencies](https://github.com/pointfreeco/swift-dependencies) instead of SwiftInjectable |
+| [`Examples/TodoApp`](Examples/TodoApp) | Feature-module app — CRUD, filtering, `UseQuery`, hook composition |
 
 ---
 
@@ -165,7 +167,7 @@ func counterIncrements() {
 ### Design Constraints
 
 - **SwiftUI only** — `@Injected` resolves via SwiftUI `Environment`. It does not work in UIKit or non-UI code.
-- **Type annotations required** — `@Hook` stored vars must have explicit type annotations (`var count: Int = 0`, not `var count = 0`) due to Swift macro limitations.
+- **Type annotations required** — `@HookState` vars must have explicit type annotations (`@HookState var count: Int = 0`, not `@HookState var count = 0`) due to Swift macro limitations.
 
 ## License
 

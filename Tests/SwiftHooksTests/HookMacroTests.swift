@@ -6,6 +6,7 @@ import SwiftHooksMacrosPlugin
 final class HookMacroTests: XCTestCase {
     private let testMacros: [String: Macro.Type] = [
         "Hook": HookMacro.self,
+        "HookState": HookStateMacro.self,
         "_HookAccessor": HookAccessorMacro.self,
     ]
 
@@ -16,7 +17,7 @@ final class HookMacroTests: XCTestCase {
             """
             @Hook
             struct UseCounter {
-                var count: Int = 0
+                @HookState var count: Int = 0
                 func increment() { count += 1 }
             }
             """,
@@ -71,7 +72,7 @@ final class HookMacroTests: XCTestCase {
         )
     }
 
-    // MARK: - stored var なし（Storage 不要）
+    // MARK: - @HookState なし（Storage 不要）
 
     func testNoStoredVars() {
         assertMacroExpansion(
@@ -95,15 +96,15 @@ final class HookMacroTests: XCTestCase {
         )
     }
 
-    // MARK: - 複数の stored var
+    // MARK: - 複数の @HookState var
 
     func testMultipleStoredVars() {
         assertMacroExpansion(
             """
             @Hook
             struct UseFetchUser {
-                var user: User? = nil
-                var isLoading: Bool = false
+                @HookState var user: User? = nil
+                @HookState var isLoading: Bool = false
             }
             """,
             expandedSource: """
@@ -176,7 +177,7 @@ final class HookMacroTests: XCTestCase {
         )
     }
 
-    // MARK: - @Injected は除外
+    // MARK: - @Injected は @HookState なしなので除外
 
     func testInjectedPropertyIsIgnored() {
         assertMacroExpansion(
@@ -184,7 +185,7 @@ final class HookMacroTests: XCTestCase {
             @Hook
             struct UseFetchUser {
                 @Injected var userUseCase: any UserUseCaseProtocol
-                var isLoading: Bool = false
+                @HookState var isLoading: Bool = false
             }
             """,
             expandedSource: """
@@ -245,7 +246,7 @@ final class HookMacroTests: XCTestCase {
             """
             @Hook
             class BadHook {
-                var count: Int = 0
+                @HookState var count: Int = 0
             }
             """,
             expandedSource: """
@@ -264,14 +265,14 @@ final class HookMacroTests: XCTestCase {
         )
     }
 
-    // MARK: - デフォルト値なしの stored var
+    // MARK: - デフォルト値なしの @HookState var
 
     func testStoredVarWithoutDefault() {
         assertMacroExpansion(
             """
             @Hook
             struct UseValue {
-                var value: String
+                @HookState var value: String
             }
             """,
             expandedSource: """
@@ -331,7 +332,7 @@ final class HookMacroTests: XCTestCase {
             """
             @Hook
             public struct UseCounter {
-                var count: Int = 0
+                @HookState var count: Int = 0
             }
             """,
             expandedSource: """
@@ -391,7 +392,7 @@ final class HookMacroTests: XCTestCase {
             """
             @Hook
             struct UseValue<T> {
-                var value: T
+                @HookState var value: T
             }
             """,
             expandedSource: """
@@ -444,14 +445,14 @@ final class HookMacroTests: XCTestCase {
         )
     }
 
-    // MARK: - 型注釈なしはエラー
+    // MARK: - @HookState に型注釈なしはエラー
 
     func testMissingTypeAnnotationProducesError() {
         assertMacroExpansion(
             """
             @Hook
             struct UseCounter {
-                var count = 0
+                @HookState var count = 0
             }
             """,
             expandedSource: """
@@ -469,6 +470,100 @@ final class HookMacroTests: XCTestCase {
                     column: 5
                 ),
             ],
+            macros: testMacros
+        )
+    }
+
+    // MARK: - @State は警告
+
+    func testStatePropertyProducesWarning() {
+        assertMacroExpansion(
+            """
+            @Hook
+            struct UseCounter {
+                @State var count: Int = 0
+            }
+            """,
+            expandedSource: """
+            struct UseCounter {
+                @State var count: Int = 0
+            }
+
+            extension UseCounter: DynamicProperty {
+            }
+            """,
+            diagnostics: [
+                DiagnosticSpec(
+                    message: "@State should not be used inside @Hook. Use @HookState on 'count' instead.",
+                    line: 3,
+                    column: 5,
+                    severity: .warning
+                ),
+            ],
+            macros: testMacros
+        )
+    }
+
+    // MARK: - @HookState なしの var は無視される
+
+    func testPlainVarIsIgnored() {
+        assertMacroExpansion(
+            """
+            @Hook
+            struct UseGreeting {
+                @Dependency var provider: any GreetingProvider
+                var config: Config = .default
+                @HookState var name: String = ""
+            }
+            """,
+            expandedSource: """
+            struct UseGreeting {
+                @Dependency var provider: any GreetingProvider
+                var config: Config = .default
+                var name: String {
+                    @storageRestrictions(initializes: _hook_backing_name)
+                    init(initialValue) {
+                        _hook_backing_name = initialValue
+                    }
+                    get {
+                        hookStorage.name
+                    }
+                    nonmutating set {
+                        hookStorage.name = newValue
+                    }
+                }
+
+                private var _hook_backing_name: String
+
+                @Observable
+                final class Storage {
+                    var name: String
+                    init(
+                        name: String
+                    ) {
+                            self.name = name
+                    }
+                }
+
+                @SwiftUI.State private var hookStorage: Storage
+
+                var binding: SwiftUI.Binding<Storage> {
+                    $hookStorage
+                }
+
+                init(
+                        name: String = ""
+                ) {
+                    self.name = name
+                    _hookStorage = SwiftUI.State(initialValue: Storage(
+                            name: name
+                    ))
+                }
+            }
+
+            extension UseGreeting: DynamicProperty {
+            }
+            """,
             macros: testMacros
         )
     }

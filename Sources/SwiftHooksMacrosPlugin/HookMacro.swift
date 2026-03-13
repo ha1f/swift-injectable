@@ -18,6 +18,9 @@ extension HookMacro: MemberMacro {
             throw DiagnosticsError(message: "@Hook can only be applied to structs")
         }
 
+        // @State の誤用を警告
+        warnStateProperties(in: declaration, context: context)
+
         let storedVars = extractStoredVars(from: declaration, in: context)
 
         // stored var がなければ Storage は生成しない
@@ -190,6 +193,31 @@ private func extractStoredVars(
     }
 }
 
+/// @State 付きプロパティがあれば警告を出す
+private func warnStateProperties(
+    in declaration: some DeclGroupSyntax,
+    context: some MacroExpansionContext
+) {
+    for member in declaration.memberBlock.members {
+        guard let varDecl = member.decl.as(VariableDeclSyntax.self) else { continue }
+        for attr in varDecl.attributes {
+            if case let .attribute(a) = attr,
+               let identType = a.attributeName.as(IdentifierTypeSyntax.self),
+               identType.name.trimmedDescription == "State" {
+                if let binding = varDecl.bindings.first,
+                   let pattern = binding.pattern.as(IdentifierPatternSyntax.self) {
+                    context.diagnose(Diagnostic(
+                        node: varDecl,
+                        message: HookDiagnosticMessage.statePropertyInHook(
+                            name: pattern.identifier.trimmedDescription
+                        )
+                    ))
+                }
+            }
+        }
+    }
+}
+
 /// stored var かどうか判定する（型注釈の有無は問わない）
 private func isStoredVar(_ varDecl: VariableDeclSyntax) -> Bool {
     // let は除外（sub-hook や定数）
@@ -206,17 +234,16 @@ private func isStoredVar(_ varDecl: VariableDeclSyntax) -> Bool {
         return false
     }
 
-    // @Injected などの特定の属性がある場合は除外
-    let excludedAttributes: Set<String> = ["Injected", "Environment", "State", "Binding", "ObservedObject", "StateObject"]
+    // @HookState が付いている場合のみ stored var として扱う
     for attr in varDecl.attributes {
         if case let .attribute(a) = attr,
            let identType = a.attributeName.as(IdentifierTypeSyntax.self),
-           excludedAttributes.contains(identType.name.trimmedDescription) {
-            return false
+           identType.name.trimmedDescription == "HookState" {
+            return true
         }
     }
 
-    return true
+    return false
 }
 
 /// stored var かつ型注釈ありかどうか判定する
@@ -240,6 +267,14 @@ private struct HookDiagnosticMessage: DiagnosticMessage {
     let message: String
     let diagnosticID: MessageID
     let severity: DiagnosticSeverity
+
+    static func statePropertyInHook(name: String) -> Self {
+        HookDiagnosticMessage(
+            message: "@State should not be used inside @Hook. Use @HookState on '\(name)' instead.",
+            diagnosticID: MessageID(domain: "SwiftHooksMacrosPlugin", id: "statePropertyInHook"),
+            severity: .warning
+        )
+    }
 
     static func missingTypeAnnotation(name: String) -> Self {
         HookDiagnosticMessage(
