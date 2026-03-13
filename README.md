@@ -168,7 +168,3 @@ func counterIncrements() {
 
 - **SwiftUI only** — `@Injected` resolves via SwiftUI `Environment`. It does not work in UIKit or non-UI code.
 - **Type annotations required** — `@HookState` vars must have explicit type annotations (`@HookState var count: Int = 0`, not `@HookState var count = 0`) due to Swift macro limitations.
-
-## License
-
-Apache License 2.0. See [LICENSE](LICENSE) for details.
