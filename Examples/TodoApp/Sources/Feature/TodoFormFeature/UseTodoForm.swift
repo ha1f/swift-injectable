@@ -6,8 +6,8 @@ import SwiftUI
 @Hook
 @MainActor
 public struct UseTodoForm {
-    public var title: String = ""
-    public var isSubmitting: Bool = false
+    @HookState public var title: String = ""
+    @HookState public var isSubmitting: Bool = false
 
     /// タイトルが空でないかバリデーション
     public var isValid: Bool {

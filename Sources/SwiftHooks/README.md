@@ -4,7 +4,7 @@
 
 ## 概要
 
-`@Hook` は struct の stored var を `@Observable` な Storage クラスに移動し、`@SwiftUI.State` で保持する。これにより SwiftUI ビュー内でもユニットテストでも mutation が動作する。
+`@Hook` は `@HookState` が付いた stored var を `@Observable` な Storage クラスに移動し、`@SwiftUI.State` で保持する。これにより SwiftUI ビュー内でもユニットテストでも mutation が動作する。
 
 ## 使い方
 
@@ -16,8 +16,8 @@
 struct UseFetchUser {
     @Injected var userUseCase: any UserUseCaseProtocol
     @Injected var logger: any LoggerProtocol
-    var user: User? = nil
-    var isLoading: Bool = false
+    @HookState var user: User? = nil
+    @HookState var isLoading: Bool = false
 
     func fetch(userId: Int) async {
         isLoading = true
@@ -58,7 +58,7 @@ struct FeatureView: View {
 ```swift
 @Hook
 struct UseCounter {
-    var count: Int = 0
+    @HookState var count: Int = 0
     func increment() { count += 1 }
 }
 ```
@@ -93,17 +93,18 @@ extension UseCounter: DynamicProperty {}
 
 | 宣言 | 扱い |
 |---|---|
-| `var x: T = value` (stored, 型注釈あり) | `Storage` に移動、computed property に置換 |
+| `@HookState var x: T = value` | `Storage` に移動、computed property に置換 |
+| `var x: T = value` (without `@HookState`) | そのまま（サードパーティ property wrapper 等に対応） |
 | `var x: T { ... }` (computed) | そのまま |
 | `let x = SomeHook()` | そのまま (sub-hook, SwiftUI が管理) |
 | `@Injected var x` | そのまま |
-| `@Environment`, `@State`, `@Binding` 等 | そのまま |
 | `func ...` | そのまま (`nonmutating set` で mutation 可能) |
 
 ## 制約
 
-- **型注釈が必須**: stored var には `var count: Int = 0` と書く（`var count = 0` は不可）。型注釈がない場合はコンパイルエラー
+- **型注釈が必須**: `@HookState` var には `@HookState var count: Int = 0` と書く（`@HookState var count = 0` は不可）。型注釈がない場合はコンパイルエラー
 - `@Hook` は struct にのみ適用可能
+- `@State` を `@Hook` 内で使うと警告が出る。代わりに `@HookState` を使うこと
 
 ## ライフサイクル (`update()`)
 
@@ -114,8 +115,8 @@ extension UseCounter: DynamicProperty {}
 @MainActor
 struct UseAutoRefresh {
     @Injected var api: any APIClientProtocol
-    var items: [Item] = []
-    var needsRefresh: Bool = true
+    @HookState var items: [Item] = []
+    @HookState var needsRefresh: Bool = true
 
     mutating func update() {
         guard needsRefresh else { return }
@@ -129,7 +130,7 @@ struct UseAutoRefresh {
 
 ## ステートなし Hook
 
-stored var がなければ、`Storage` クラスなしで `DynamicProperty` 準拠のみ追加する:
+`@HookState` var がなければ、`Storage` クラスなしで `DynamicProperty` 準拠のみ追加する:
 
 ```swift
 @Hook
@@ -155,7 +156,8 @@ func counterIncrements() {
 ## マクロ内部動作
 
 1. **Member macro** — `Storage` クラス、`@SwiftUI.State` プロパティ、`init` を生成
-2. **Member attribute macro** — 各 stored var に `@_HookAccessor` を付与
+2. **Member attribute macro** — 各 `@HookState` var に `@_HookAccessor` を付与
 3. **`@_HookAccessor` accessor macro** — `hookStorage` に委譲する `get`/`nonmutating set` を追加し、computed property に変換
 4. **`@_HookAccessor` peer macro** — init accessor が必要とするバッキングストアドプロパティを生成
-5. **Extension macro** — `DynamicProperty` 準拠を追加
+5. **`@HookState` peer macro** — マーカーのみ。`@Hook` が `@HookState` の存在で Storage 移動を判定
+6. **Extension macro** — `DynamicProperty` 準拠を追加

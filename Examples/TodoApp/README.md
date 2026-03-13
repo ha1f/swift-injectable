@@ -1,6 +1,10 @@
 # TodoApp
 
-swift-injectable の高度な使用パターンを示すサンプルアプリです。
+## 狙い
+
+**実践的なマルチモジュール構成**で、SwiftInjectable + SwiftHooks + SwiftHooksQuery をフル活用するパターンを示す。
+Feature単位のモジュール分割、UseQueryによるキャッシュ管理、hook合成による関心の分離など、
+Greetingでは扱わない実アプリ寄りの設計を体験できるようにしている。
 
 ## アーキテクチャ
 
