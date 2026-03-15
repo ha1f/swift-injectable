@@ -181,17 +181,15 @@ private struct StoredVarInfo {
 
     /// Storage プロパティに適用するアクセス修飾子を返す
     /// - private → fileprivate（ネストされた型なのでスコープが変わるため）
-    /// - public/internal → 修飾子なし（型が public とは限らないため）
     /// - fileprivate → fileprivate
+    /// - public/open/internal → そのまま（明示的な意図を尊重）
     /// - 修飾子なし → struct のアクセスレベルに従う
     func storageAccessModifier(structAccessLevel: String) -> String {
         switch accessModifier {
         case "private":
             return "fileprivate "
-        case "fileprivate":
-            return "fileprivate "
-        case "public", "open", "internal":
-            return ""
+        case let modifier?:
+            return modifier + " "
         default:
             return structAccessLevel
         }
