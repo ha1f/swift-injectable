@@ -624,6 +624,68 @@ final class HookMacroTests: XCTestCase {
         )
     }
 
+    // MARK: - @MainActor struct
+
+    func testMainActorPropagation() {
+        assertMacroExpansion(
+            """
+            @Hook
+            @MainActor
+            struct UseCamera {
+                @HookState var isActive: Bool = false
+            }
+            """,
+            expandedSource: """
+            @MainActor
+            struct UseCamera {
+                var isActive: Bool {
+                    @storageRestrictions(initializes: _hook_backing_isActive)
+                    init(initialValue) {
+                        _hook_backing_isActive = initialValue
+                    }
+                    get {
+                        hookStorage.isActive
+                    }
+                    nonmutating set {
+                        hookStorage.isActive = newValue
+                    }
+                }
+
+                private var _hook_backing_isActive: Bool
+
+                @Observable
+                @MainActor final class Storage {
+                    var isActive: Bool
+                    @MainActor init(
+                        isActive: Bool
+                    ) {
+                            self.isActive = isActive
+                    }
+                }
+
+                @SwiftUI.State private var hookStorage: Storage
+
+                var binding: SwiftUI.Binding<Storage> {
+                    $hookStorage
+                }
+
+                @MainActor init(
+                        isActive: Bool = false
+                ) {
+                    self.isActive = isActive
+                    _hookStorage = SwiftUI.State(initialValue: Storage(
+                            isActive: isActive
+                    ))
+                }
+            }
+
+            extension UseCamera: DynamicProperty {
+            }
+            """,
+            macros: testMacros
+        )
+    }
+
     // MARK: - @HookState なしの var は無視される
 
     func testPlainVarIsIgnored() {
