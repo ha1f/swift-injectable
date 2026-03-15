@@ -41,6 +41,15 @@ extension HookMacro: MemberMacro {
             accessLevel = ""
         }
 
+        // struct から生成コードに伝播すべき属性を抽出
+        let propagatingAttributes = extractPropagatingAttributes(
+            from: declaration,
+            excluding: node
+        )
+        let propagatingPrefix = propagatingAttributes
+            .map { "\($0.trimmedDescription) " }
+            .joined()
+
         // Storage クラス
         let storageProperties = storedVars.map { sv -> String in
             let propAccess = sv.storageAccessModifier(structAccessLevel: accessLevel)
@@ -65,9 +74,9 @@ extension HookMacro: MemberMacro {
 
         let storageDecl: DeclSyntax = """
             @Observable
-            \(raw: accessLevel)final class Storage {
+            \(raw: propagatingPrefix)\(raw: accessLevel)final class Storage {
             \(raw: storageProperties)
-                init(
+                \(raw: propagatingPrefix)init(
             \(raw: initParams)
                 ) {
             \(raw: initBody)
@@ -110,7 +119,7 @@ extension HookMacro: MemberMacro {
         }.joined(separator: ",\n")
 
         let hookInit: DeclSyntax = """
-            \(raw: accessLevel)init(
+            \(raw: propagatingPrefix)\(raw: accessLevel)init(
             \(raw: hookInitParams)
             ) {
             \(raw: dummyInits)
@@ -163,6 +172,43 @@ extension HookMacro: ExtensionMacro {
         }
         return [extDecl]
     }
+}
+
+// MARK: - 属性の伝播
+
+/// struct の属性のうち、生成するコードに伝播すべきものを抽出する
+/// - Parameters:
+///   - declaration: マクロが付与された宣言
+///   - macroNode: マクロ自身の属性（除外対象）
+private func extractPropagatingAttributes(
+    from declaration: some DeclGroupSyntax,
+    excluding macroNode: AttributeSyntax
+) -> [AttributeSyntax] {
+    guard let structDecl = declaration.as(StructDeclSyntax.self) else {
+        return []
+    }
+    let macroName = macroNode.attributeName.trimmedDescription
+    return structDecl.attributes.compactMap { attr -> AttributeSyntax? in
+        guard case let .attribute(a) = attr else { return nil }
+        guard a.attributeName.trimmedDescription != macroName else { return nil }
+        guard shouldPropagateAttribute(a) else { return nil }
+        return a
+    }
+}
+
+/// 属性が生成コードに伝播すべきかどうかを判定する
+/// 新しいカテゴリを追加する場合はここを拡張する
+private func shouldPropagateAttribute(_ attribute: AttributeSyntax) -> Bool {
+    isGlobalActorAttribute(attribute)
+}
+
+/// グローバルアクター属性かどうかを判定する
+/// Swift の命名規約に基づき、名前が "Actor" で終わる属性をグローバルアクターとみなす
+private func isGlobalActorAttribute(_ attribute: AttributeSyntax) -> Bool {
+    guard let ident = attribute.attributeName.as(IdentifierTypeSyntax.self) else {
+        return false
+    }
+    return ident.name.trimmedDescription.hasSuffix("Actor")
 }
 
 // MARK: - ヘルパー
