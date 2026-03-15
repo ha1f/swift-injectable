@@ -445,6 +445,126 @@ final class HookMacroTests: XCTestCase {
         )
     }
 
+    // MARK: - private @HookState
+
+    func testPrivateHookState() {
+        assertMacroExpansion(
+            """
+            @Hook
+            struct UsePostCapture {
+                @HookState var caption: String = ""
+                @HookState private var capturedImageData: Data? = nil
+            }
+            """,
+            expandedSource: """
+            struct UsePostCapture {
+                var caption: String {
+                    @storageRestrictions(initializes: _hook_backing_caption)
+                    init(initialValue) {
+                        _hook_backing_caption = initialValue
+                    }
+                    get {
+                        hookStorage.caption
+                    }
+                    nonmutating set {
+                        hookStorage.caption = newValue
+                    }
+                }
+
+                private var _hook_backing_caption: String
+                private var capturedImageData: Data? {
+                    @storageRestrictions(initializes: _hook_backing_capturedImageData)
+                    init(initialValue) {
+                        _hook_backing_capturedImageData = initialValue
+                    }
+                    get {
+                        hookStorage.capturedImageData
+                    }
+                    nonmutating set {
+                        hookStorage.capturedImageData = newValue
+                    }
+                }
+
+                private var _hook_backing_capturedImageData: Data?
+
+                @Observable
+                final class Storage {
+                    var caption: String
+                    private var capturedImageData: Data?
+                    init(
+                        caption: String
+                    ) {
+                            self.caption = caption
+                            self.capturedImageData = nil
+                    }
+                }
+
+                @SwiftUI.State private var hookStorage: Storage
+
+                var binding: SwiftUI.Binding<Storage> {
+                    $hookStorage
+                }
+
+                init(
+                        caption: String = ""
+                ) {
+                    self.caption = caption
+                    self.capturedImageData = nil
+                    _hookStorage = SwiftUI.State(initialValue: Storage(
+                            caption: caption
+                    ))
+                }
+            }
+
+            extension UsePostCapture: DynamicProperty {
+            }
+            """,
+            macros: testMacros
+        )
+    }
+
+    // MARK: - private @HookState にデフォルト値なしはエラー
+
+    func testPrivateHookStateWithoutDefaultProducesError() {
+        assertMacroExpansion(
+            """
+            @Hook
+            struct UseCapture {
+                @HookState private var data: Data?
+            }
+            """,
+            expandedSource: """
+            struct UseCapture {
+                private var data: Data? {
+                    @storageRestrictions(initializes: _hook_backing_data)
+                    init(initialValue) {
+                        _hook_backing_data = initialValue
+                    }
+                    get {
+                        hookStorage.data
+                    }
+                    nonmutating set {
+                        hookStorage.data = newValue
+                    }
+                }
+
+                private var _hook_backing_data: Data?
+            }
+
+            extension UseCapture: DynamicProperty {
+            }
+            """,
+            diagnostics: [
+                DiagnosticSpec(
+                    message: "Private @HookState property 'data' requires a default value.",
+                    line: 3,
+                    column: 5
+                ),
+            ],
+            macros: testMacros
+        )
+    }
+
     // MARK: - @HookState に型注釈なしはエラー
 
     func testMissingTypeAnnotationProducesError() {

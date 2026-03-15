@@ -42,17 +42,32 @@ extension HookMacro: MemberMacro {
         }
 
         // Storage クラス
-        let storageProperties = storedVars.map {
-            "    \(accessLevel)var \($0.name): \($0.type)"
+        let storageProperties = storedVars.map { sv -> String in
+            // 個別のアクセス修飾子があればそれを優先、なければ struct のアクセスレベル
+            let propAccess: String
+            if let modifier = sv.accessModifier {
+                propAccess = modifier + " "
+            } else {
+                propAccess = accessLevel
+            }
+            return "    \(propAccess)var \(sv.name): \(sv.type)"
         }.joined(separator: "\n")
 
-        let initParams = storedVars.map {
+        // private なプロパティは init パラメータから除外
+        let publicVars = storedVars.filter { !$0.isPrivateAccess }
+        let privateVars = storedVars.filter { $0.isPrivateAccess }
+
+        let initParams = publicVars.map {
             "        \($0.name): \($0.type)"
         }.joined(separator: ",\n")
 
-        let initBody = storedVars.map {
+        let initBodyPublic = publicVars.map {
             "            self.\($0.name) = \($0.name)"
-        }.joined(separator: "\n")
+        }
+        let initBodyPrivate = privateVars.map {
+            "            self.\($0.name) = \($0.defaultValue!)"
+        }
+        let initBody = (initBodyPublic + initBodyPrivate).joined(separator: "\n")
 
         let storageDecl: DeclSyntax = """
             @Observable
@@ -78,8 +93,8 @@ extension HookMacro: MemberMacro {
             }
             """
 
-        // init
-        let hookInitParams = storedVars.map { sv in
+        // init（private なプロパティはパラメータから除外）
+        let hookInitParams = publicVars.map { sv in
             if let defaultValue = sv.defaultValue {
                 return "        \(sv.name): \(sv.type) = \(defaultValue)"
             } else {
@@ -88,11 +103,15 @@ extension HookMacro: MemberMacro {
         }.joined(separator: ",\n")
 
         // init accessor で初期化されるダミーバッキングストレージの初期化
-        let dummyInits = storedVars.map {
+        let dummyInitsPublic = publicVars.map {
             "    self.\($0.name) = \($0.name)"
-        }.joined(separator: "\n")
+        }
+        let dummyInitsPrivate = privateVars.map {
+            "    self.\($0.name) = \($0.defaultValue!)"
+        }
+        let dummyInits = (dummyInitsPublic + dummyInitsPrivate).joined(separator: "\n")
 
-        let storageInitArgs = storedVars.map {
+        let storageInitArgs = publicVars.map {
             "            \($0.name): \($0.name)"
         }.joined(separator: ",\n")
 
@@ -158,6 +177,13 @@ private struct StoredVarInfo {
     let name: String
     let type: String
     let defaultValue: String?
+    /// プロパティ個別のアクセス修飾子（private, fileprivate 等）
+    let accessModifier: String?
+
+    /// 外部から非公開かどうか（private / fileprivate）
+    var isPrivateAccess: Bool {
+        accessModifier == "private" || accessModifier == "fileprivate"
+    }
 }
 
 /// stored var を抽出する（型注釈必須）
@@ -189,7 +215,31 @@ private func extractStoredVars(
         let type = typeAnnotation.type.trimmedDescription
         let defaultValue = binding.initializer?.value.trimmedDescription
 
-        return StoredVarInfo(name: name, type: type, defaultValue: defaultValue)
+        // アクセス修飾子を抽出（private, fileprivate 等）
+        let accessModifier: String? = varDecl.modifiers.lazy
+            .map { $0.name.tokenKind }
+            .compactMap { tokenKind -> String? in
+                switch tokenKind {
+                case .keyword(.private): return "private"
+                case .keyword(.fileprivate): return "fileprivate"
+                case .keyword(.internal): return "internal"
+                case .keyword(.public): return "public"
+                case .keyword(.open): return "open"
+                default: return nil
+                }
+            }
+            .first
+
+        // private/fileprivate なプロパティにはデフォルト値が必須
+        if (accessModifier == "private" || accessModifier == "fileprivate") && defaultValue == nil {
+            context.diagnose(Diagnostic(
+                node: varDecl,
+                message: HookDiagnosticMessage.privatePropertyRequiresDefault(name: name)
+            ))
+            return nil
+        }
+
+        return StoredVarInfo(name: name, type: type, defaultValue: defaultValue, accessModifier: accessModifier)
     }
 }
 
@@ -273,6 +323,14 @@ private struct HookDiagnosticMessage: DiagnosticMessage {
             message: "@State should not be used inside @Hook. Use @HookState on '\(name)' instead.",
             diagnosticID: MessageID(domain: "SwiftHooksMacrosPlugin", id: "statePropertyInHook"),
             severity: .warning
+        )
+    }
+
+    static func privatePropertyRequiresDefault(name: String) -> Self {
+        HookDiagnosticMessage(
+            message: "Private @HookState property '\(name)' requires a default value.",
+            diagnosticID: MessageID(domain: "SwiftHooksMacrosPlugin", id: "privatePropertyRequiresDefault"),
+            severity: .error
         )
     }
 
