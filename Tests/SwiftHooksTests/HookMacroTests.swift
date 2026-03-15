@@ -490,7 +490,7 @@ final class HookMacroTests: XCTestCase {
                 @Observable
                 final class Storage {
                     var caption: String
-                    private var capturedImageData: Data?
+                    fileprivate var capturedImageData: Data?
                     init(
                         caption: String
                     ) {

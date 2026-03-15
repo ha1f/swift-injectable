@@ -43,13 +43,7 @@ extension HookMacro: MemberMacro {
 
         // Storage クラス
         let storageProperties = storedVars.map { sv -> String in
-            // 個別のアクセス修飾子があればそれを優先、なければ struct のアクセスレベル
-            let propAccess: String
-            if let modifier = sv.accessModifier {
-                propAccess = modifier + " "
-            } else {
-                propAccess = accessLevel
-            }
+            let propAccess = sv.storageAccessModifier(structAccessLevel: accessLevel)
             return "    \(propAccess)var \(sv.name): \(sv.type)"
         }.joined(separator: "\n")
 
@@ -183,6 +177,24 @@ private struct StoredVarInfo {
     /// 外部から非公開かどうか（private / fileprivate）
     var isPrivateAccess: Bool {
         accessModifier == "private" || accessModifier == "fileprivate"
+    }
+
+    /// Storage プロパティに適用するアクセス修飾子を返す
+    /// - private → fileprivate（ネストされた型なのでスコープが変わるため）
+    /// - public/internal → 修飾子なし（型が public とは限らないため）
+    /// - fileprivate → fileprivate
+    /// - 修飾子なし → struct のアクセスレベルに従う
+    func storageAccessModifier(structAccessLevel: String) -> String {
+        switch accessModifier {
+        case "private":
+            return "fileprivate "
+        case "fileprivate":
+            return "fileprivate "
+        case "public", "open", "internal":
+            return ""
+        default:
+            return structAccessLevel
+        }
     }
 }
 
